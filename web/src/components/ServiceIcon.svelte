@@ -1,56 +1,65 @@
 <script module lang="ts">
+  type IconifySearchResponse = {
+    icons?: string[];
+    collections?: Record<string, { palette?: boolean }>;
+  };
+
   const resolvedCache = new Map<string, string | null>();
   const inflightCache = new Map<string, Promise<string | null>>();
 
-  function buildCandidates(iconKey: string, serviceKey: string): string[] {
-    const urls: string[] = [];
-    const seen = new Set<string>();
-    const add = (url: string) => {
-      if(!seen.has(url)) {
-        seen.add(url);
-        urls.push(url);
-      }
-    };
-
-    const addKey = (raw: string) => {
-      const trimmed = raw.trim().toLowerCase();
-      if(!trimmed) {
-        return;
-      }
-      if(trimmed.includes(':')) {
-        const [prefix, name] = trimmed.split(':', 2);
-        if(prefix && name) {
-          add(`https://api.iconify.design/${encodeURIComponent(prefix)}/${encodeURIComponent(name.replace(/[_\s]+/g, '-'))}.svg`);
-        }
-        return;
-      }
-      const kebab = trimmed.replace(/[_\s]+/g, '-');
-      const compact = kebab.replace(/-/g, '');
-      add(`https://api.iconify.design/simple-icons/${encodeURIComponent(kebab)}.svg`);
-      if(compact && compact !== kebab) {
-        add(`https://api.iconify.design/simple-icons/${encodeURIComponent(compact)}.svg`);
-      }
-      add(`https://api.iconify.design/material-symbols/${encodeURIComponent(kebab)}.svg`);
-      add(`https://api.iconify.design/mdi/${encodeURIComponent(kebab)}.svg`);
-    };
-
-    addKey(iconKey);
-    addKey(serviceKey);
-    return urls;
+  function iconifySvgUrl(prefix: string, name: string): string {
+    return `https://api.iconify.design/${encodeURIComponent(prefix)}/${encodeURIComponent(name)}.svg`;
   }
 
-  function tryUrls(urls: string[], index: number): Promise<string | null> {
-    if(index >= urls.length) {
+  function pickSearchResult(data: IconifySearchResponse): string | null {
+    const icons = data.icons || [];
+    if(icons.length < 1) {
+      return null;
+    }
+    const collections = data.collections || {};
+    const mono = icons.find(id => {
+      const [prefix, name = ''] = id.split(':', 2);
+      return collections[prefix]?.palette === false && !name.endsWith('-wordmark');
+    });
+    const chosen = mono || icons[0];
+    const [prefix, name] = chosen.split(':', 2);
+    if(!prefix || !name) {
+      return null;
+    }
+    return iconifySvgUrl(prefix, name);
+  }
+
+  function searchIconify(query: string): Promise<string | null> {
+    const url = `https://api.iconify.design/search?query=${encodeURIComponent(query)}&limit=10`;
+    return fetch(url)
+      .then(res => res.ok ? res.json() : null)
+      .then((data: IconifySearchResponse | null) => data ? pickSearchResult(data) : null)
+      .catch(() => null);
+  }
+
+  function tryQueries(queries: string[], index: number): Promise<string | null> {
+    if(index >= queries.length) {
       return Promise.resolve(null);
     }
-    const url = urls[index];
-    return fetch(url)
-      .then(res => res.ok ? url : tryUrls(urls, index + 1))
-      .catch(() => tryUrls(urls, index + 1));
+    const raw = queries[index].trim().toLowerCase();
+    if(raw.includes(':')) {
+      const [prefix, name] = raw.split(':', 2);
+      if(!prefix || !name) {
+        return tryQueries(queries, index + 1);
+      }
+      const directUrl = iconifySvgUrl(prefix, name.replace(/[_\s]+/g, '-'));
+      return fetch(directUrl)
+        .then(res => res.ok ? directUrl : tryQueries(queries, index + 1))
+        .catch(() => tryQueries(queries, index + 1));
+    }
+
+    return searchIconify(raw).then(url => url || tryQueries(queries, index + 1));
   }
 
   function resolveOnlineIcon(iconKey: string, serviceKey: string): Promise<string | null> {
-    const cacheKey = `${iconKey.trim().toLowerCase()}|${serviceKey.trim().toLowerCase()}`;
+    const iconNorm = iconKey.trim().toLowerCase();
+    const serviceNorm = serviceKey.trim().toLowerCase();
+    const cacheKey = `${iconNorm}|${serviceNorm}`;
     if(resolvedCache.has(cacheKey)) {
       return Promise.resolve(resolvedCache.get(cacheKey) ?? null);
     }
@@ -58,12 +67,14 @@
     if(existing) {
       return existing;
     }
-    const candidates = buildCandidates(iconKey, serviceKey);
-    if(candidates.length < 1) {
+
+    const queries = [iconNorm, serviceNorm].filter((q, i, arr) => q && arr.indexOf(q) === i);
+    if(queries.length < 1) {
       resolvedCache.set(cacheKey, null);
       return Promise.resolve(null);
     }
-    const req = tryUrls(candidates, 0).then(url => {
+
+    const req = tryQueries(queries, 0).then(url => {
       resolvedCache.set(cacheKey, url);
       inflightCache.delete(cacheKey);
       return url;
