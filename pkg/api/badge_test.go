@@ -47,6 +47,13 @@ func TestHandleBadge_SuccessAndEnvResolution(t *testing.T) {
 	if !strings.Contains(body, `href="http://deploystackr.local/billing-service"`) {
 		t.Errorf("expected link to service page in SVG, got: %s", body)
 	}
+	if !strings.Contains(body, `class="env-drawer"`) || !strings.Contains(body, `staging`) {
+		t.Errorf("expected hover env-drawer with remaining environments when env is unspecified, got: %s", body)
+	}
+	drawerPart := body[strings.Index(body, `class="env-drawer"`):]
+	if strings.Contains(drawerPart, `>production<`) {
+		t.Errorf("did not expect primary env 'production' to be duplicated inside env-drawer, got: %s", drawerPart)
+	}
 }
 
 func TestHandleBadge_BehindAndThemeAndCustomTitle(t *testing.T) {
@@ -71,8 +78,14 @@ func TestHandleBadge_BehindAndThemeAndCustomTitle(t *testing.T) {
 	if !strings.Contains(body, `fill="#f59e0b"`) {
 		t.Errorf("expected amber behind dot, got: %s", body)
 	}
+	if !strings.Contains(body, `class="right-bg outdated"`) || !strings.Contains(body, `class="value outdated"`) {
+		t.Errorf("expected outdated tint classes on version segment, got: %s", body)
+	}
 	if !strings.Contains(body, "#0f172a") {
 		t.Errorf("expected dark theme background, got: %s", body)
+	}
+	if strings.Contains(body, `class="env-drawer"`) {
+		t.Errorf("did not expect env-drawer when env is explicitly specified, got: %s", body)
 	}
 }
 

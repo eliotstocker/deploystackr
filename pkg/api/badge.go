@@ -62,9 +62,57 @@ func (s *Server) handleBadge(w http.ResponseWriter, r *http.Request) {
 		leftText = fmt.Sprintf("%s · %s", label, targetEnv)
 	}
 
+	primaryState := s.buildEnvBadgeState(serviceName, targetEnv)
+
+	var hoverRows []envBadgeRow
+	if envParam == "" {
+		orderedEnvs := sortBadgeEnvs(svcCfg, s.cfg)
+		if len(orderedEnvs) > 1 {
+			hoverRows = make([]envBadgeRow, 0, len(orderedEnvs)-1)
+			for _, envName := range orderedEnvs[1:] {
+				st := s.buildEnvBadgeState(serviceName, envName)
+				hoverRows = append(hoverRows, envBadgeRow{
+					envName:   envName,
+					rightText: st.rightText,
+					dotColor:  st.dotColor,
+					outdated:  st.outdated,
+				})
+			}
+		}
+	}
+
+	s.writeBadgeSVG(w, http.StatusOK, badgeSpec{
+		leftText:  leftText,
+		rightText: primaryState.rightText,
+		dotColor:  primaryState.dotColor,
+		outdated:  primaryState.outdated,
+		hoverRows: hoverRows,
+		theme:     badgeTheme(r),
+		href:      servicePageURL(r, serviceName),
+	})
+}
+
+type envBadgeRow struct {
+	envName   string
+	rightText string
+	dotColor  string
+	outdated  bool
+}
+
+type badgeSpec struct {
+	leftText  string
+	rightText string
+	dotColor  string
+	outdated  bool
+	hoverRows []envBadgeRow
+	theme     string
+	href      string
+}
+
+func (s *Server) buildEnvBadgeState(serviceName, envName string) envBadgeRow {
 	activeVer := "unknown"
-	if targetEnv != "" {
-		if activeEvt := s.store.GetActiveEvent(serviceName, targetEnv); activeEvt != nil && activeEvt.Version != "" {
+	if envName != "" {
+		if activeEvt := s.store.GetActiveEvent(serviceName, envName); activeEvt != nil && activeEvt.Version != "" {
 			activeVer = activeEvt.Version
 		}
 	}
@@ -76,8 +124,9 @@ func (s *Server) handleBadge(w http.ResponseWriter, r *http.Request) {
 		dotColor = "#94a3b8"
 	}
 
-	if targetEnv != "" {
-		pendingPR := s.store.GetPendingPR(serviceName, targetEnv)
+	isOutdated := false
+	if envName != "" {
+		pendingPR := s.store.GetPendingPR(serviceName, envName)
 		if pendingPR != nil && activeVer != "unknown" && areVersionsEqual(activeVer, pendingPR.TargetVersion) {
 			pendingPR = nil
 		}
@@ -117,25 +166,17 @@ func (s *Server) handleBadge(w http.ResponseWriter, r *http.Request) {
 			dotColor = "#10b981"
 		} else if versionsBehind > 0 {
 			dotColor = "#f59e0b"
+			isOutdated = true
 			rightText = fmt.Sprintf("%s · %d behind", rightText, versionsBehind)
 		}
 	}
 
-	s.writeBadgeSVG(w, http.StatusOK, badgeSpec{
-		leftText:  leftText,
+	return envBadgeRow{
+		envName:   envName,
 		rightText: rightText,
 		dotColor:  dotColor,
-		theme:     badgeTheme(r),
-		href:      servicePageURL(r, serviceName),
-	})
-}
-
-type badgeSpec struct {
-	leftText  string
-	rightText string
-	dotColor  string
-	theme     string
-	href      string
+		outdated:  isOutdated,
+	}
 }
 
 func badgeTheme(r *http.Request) string {
@@ -162,6 +203,50 @@ func serviceDisplayName(serviceName string, svcCfg *config.ServiceConfig, r *htt
 	return serviceName
 }
 
+func sortBadgeEnvs(svcCfg *config.ServiceConfig, cfg *config.Config) []string {
+	if svcCfg == nil || len(svcCfg.Environments) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]bool, len(svcCfg.Environments))
+	ordered := make([]string, 0, len(svcCfg.Environments))
+
+	envPriority := svcCfg.EnvironmentPriority
+	if len(envPriority) == 0 && cfg != nil {
+		envPriority = cfg.EnvironmentPriority
+	}
+	for _, p := range envPriority {
+		for name := range svcCfg.Environments {
+			if !seen[name] && strings.EqualFold(strings.TrimSpace(name), strings.TrimSpace(p)) {
+				ordered = append(ordered, name)
+				seen[name] = true
+			}
+		}
+	}
+
+	var remaining []string
+	for name := range svcCfg.Environments {
+		if !seen[name] {
+			remaining = append(remaining, name)
+		}
+	}
+	sort.Strings(remaining)
+
+	// Put prod-like environments ahead of other unprioritized envs
+	var prodLike, others []string
+	for _, name := range remaining {
+		lower := strings.ToLower(name)
+		if strings.Contains(lower, "prod") || strings.Contains(lower, "live") || lower == "main" || lower == "release" {
+			prodLike = append(prodLike, name)
+		} else {
+			others = append(others, name)
+		}
+	}
+	ordered = append(ordered, prodLike...)
+	ordered = append(ordered, others...)
+	return ordered
+}
+
 func resolveBadgeEnv(svcCfg *config.ServiceConfig, cfg *config.Config, envParam string) string {
 	if svcCfg == nil || len(svcCfg.Environments) == 0 {
 		return ""
@@ -174,32 +259,11 @@ func resolveBadgeEnv(svcCfg *config.ServiceConfig, cfg *config.Config, envParam 
 		}
 		return ""
 	}
-
-	envPriority := svcCfg.EnvironmentPriority
-	if len(envPriority) == 0 && cfg != nil {
-		envPriority = cfg.EnvironmentPriority
+	ordered := sortBadgeEnvs(svcCfg, cfg)
+	if len(ordered) == 0 {
+		return ""
 	}
-	for _, p := range envPriority {
-		for name := range svcCfg.Environments {
-			if strings.EqualFold(strings.TrimSpace(name), strings.TrimSpace(p)) {
-				return name
-			}
-		}
-	}
-
-	names := make([]string, 0, len(svcCfg.Environments))
-	for name := range svcCfg.Environments {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		lower := strings.ToLower(name)
-		if strings.Contains(lower, "prod") || strings.Contains(lower, "live") || lower == "main" || lower == "release" {
-			return name
-		}
-	}
-	return names[0]
+	return ordered[0]
 }
 
 func shortBadgeVersion(v string) string {
@@ -285,32 +349,94 @@ func (s *Server) writeBadgeSVG(w http.ResponseWriter, statusCode int, spec badge
 		closeLink = `</a>`
 	}
 
+	rightBgClass := "right-bg"
+	valueClass := "value"
+	if spec.outdated {
+		rightBgClass = "right-bg outdated"
+		valueClass = "value outdated"
+	}
+
+	svgWidth := totalWidth
+	svgHeight := height
+
+	drawerSVG := ""
+	if len(spec.hoverRows) > 0 {
+		const rowHeight = 24
+		const drawerGap = 4
+		const drawerPadY = 4
+
+		maxEnvCol := 0
+		maxValCol := 0
+		for _, row := range spec.hoverRows {
+			if w := estimateTextWidth(row.envName); w > maxEnvCol {
+				maxEnvCol = w
+			}
+			if w := estimateMonoWidth(row.rightText); w > maxValCol {
+				maxValCol = w
+			}
+		}
+		drawerWidth := dotOffset + leftPadAfterDot + maxEnvCol + 20 + maxValCol + rightPad
+		if drawerWidth > svgWidth {
+			svgWidth = drawerWidth
+		}
+		if totalWidth > drawerWidth {
+			drawerWidth = totalWidth
+		}
+
+		drawerY := height + drawerGap
+		drawerHeight := drawerPadY*2 + len(spec.hoverRows)*rowHeight
+		svgHeight = drawerY + drawerHeight + 2
+
+		var rowsBuilder strings.Builder
+		valX := drawerWidth - rightPad - maxValCol
+		for i, row := range spec.hoverRows {
+			ry := drawerY + drawerPadY + i*rowHeight
+			if i > 0 {
+				fmt.Fprintf(&rowsBuilder, `      <line class="drawer-sep" x1="8" y1="%d" x2="%d" y2="%d"/>`+"\n", ry, drawerWidth-8, ry)
+			}
+			rowValClass := "value"
+			if row.outdated {
+				rowValClass = "value outdated"
+				fmt.Fprintf(&rowsBuilder, `      <rect class="right-bg outdated" x="%d" y="%d" width="%d" height="%d" rx="4"/>`+"\n", valX-8, ry+3, maxValCol+16, rowHeight-6)
+			}
+			fmt.Fprintf(&rowsBuilder, `      <circle cx="%d" cy="%d" r="3.5" fill="%s"/>`+"\n", dotOffset, ry+12, row.dotColor)
+			fmt.Fprintf(&rowsBuilder, `      <text class="label" x="%d" y="%d">%s</text>`+"\n", leftTextX, ry+16, html.EscapeString(row.envName))
+			fmt.Fprintf(&rowsBuilder, `      <text class="%s" x="%d" y="%d">%s</text>`+"\n", rowValClass, valX, ry+16, html.EscapeString(row.rightText))
+		}
+
+		drawerSVG = fmt.Sprintf(`
+    <g class="env-drawer">
+      <rect class="bg" x="0.5" y="%d.5" width="%d" height="%d" rx="6"/>
+%s    </g>`, drawerY, drawerWidth-1, drawerHeight-1, rowsBuilder.String())
+	}
+
 	svg := fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s">
   <title>%s</title>
   <style>
 %s
   </style>
   %s
-  <g>
+  <g class="badge-root">
     <rect class="bg" x="0.5" y="0.5" width="%d" height="%d" rx="6"/>
-    <path class="right-bg" d="M%d 1h%da5 5 0 0 1 5 5v%da5 5 0 0 1-5 5H%dV1z"/>
+    <path class="%s" d="M%d 1h%da5 5 0 0 1 5 5v%da5 5 0 0 1-5 5H%dV1z"/>
     <line class="divider" x1="%d" y1="1" x2="%d" y2="%d"/>
     <circle cx="%d" cy="14" r="4" fill="%s"/>
     <text class="label" x="%d" y="18">%s</text>
-    <text class="value" x="%d" y="18">%s</text>
+    <text class="%s" x="%d" y="18">%s</text>%s
   </g>
   %s
 </svg>`,
-		totalWidth, height, totalWidth, height, titleEsc,
+		svgWidth, svgHeight, svgWidth, svgHeight, titleEsc,
 		titleEsc,
 		themeCSS,
 		openLink,
 		totalWidth-1, height-1,
-		leftWidth, rightWidth-6, height-12, leftWidth,
+		rightBgClass, leftWidth, rightWidth-6, height-12, leftWidth,
 		leftWidth, leftWidth, height-1,
 		dotOffset, spec.dotColor,
 		leftTextX, leftEsc,
-		rightTextX, rightEsc,
+		valueClass, rightTextX, rightEsc,
+		drawerSVG,
 		closeLink,
 	)
 
@@ -322,19 +448,27 @@ func (s *Server) writeBadgeSVG(w http.ResponseWriter, statusCode int, spec badge
 }
 
 func badgeThemeCSS(theme string) string {
+	hoverRules := `    .env-drawer { opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-3px); transition: opacity 0.15s ease, transform 0.15s ease; }
+    .badge-root:hover .env-drawer, .badge-root:focus-within .env-drawer { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+    a { text-decoration: none; cursor: pointer; }`
+
 	lightRules := `    .bg { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1; }
     .right-bg { fill: #f8fafc; }
-    .divider { stroke: #e2e8f0; stroke-width: 1; }
+    .right-bg.outdated { fill: #fef3c7; }
+    .divider, .drawer-sep { stroke: #e2e8f0; stroke-width: 1; }
     .label { fill: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11.5px; font-weight: 600; }
     .value { fill: #334155; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11.5px; font-weight: 600; }
-    a { text-decoration: none; cursor: pointer; }`
+    .value.outdated { fill: #92400e; }
+` + hoverRules
 
 	darkRules := `    .bg { fill: #0f172a; stroke: #334155; stroke-width: 1; }
     .right-bg { fill: #1e293b; }
-    .divider { stroke: #334155; stroke-width: 1; }
+    .right-bg.outdated { fill: #422006; }
+    .divider, .drawer-sep { stroke: #334155; stroke-width: 1; }
     .label { fill: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 11.5px; font-weight: 600; }
     .value { fill: #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11.5px; font-weight: 600; }
-    a { text-decoration: none; cursor: pointer; }`
+    .value.outdated { fill: #fcd34d; }
+` + hoverRules
 
 	if theme == "dark" {
 		return darkRules
@@ -345,8 +479,10 @@ func badgeThemeCSS(theme string) string {
 	return lightRules + "\n    @media (prefers-color-scheme: dark) {\n" +
 		"      .bg { fill: #0f172a; stroke: #334155; }\n" +
 		"      .right-bg { fill: #1e293b; }\n" +
-		"      .divider { stroke: #334155; }\n" +
+		"      .right-bg.outdated { fill: #422006; }\n" +
+		"      .divider, .drawer-sep { stroke: #334155; }\n" +
 		"      .label { fill: #f8fafc; }\n" +
 		"      .value { fill: #e2e8f0; }\n" +
+		"      .value.outdated { fill: #fcd34d; }\n" +
 		"    }"
 }
