@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/eliotstocker/deploystackr/compare/v1.4.0...v1.4.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* tint outdated badge versions and add hover env drawer ([1d01c69](https://github.com/eliotstocker/deploystackr/commit/1d01c69de7a567a57c0e8cad51fb2b392763d3ad))
+
 # [1.4.0](https://github.com/eliotstocker/deploystackr/compare/v1.3.0...v1.4.0) (2026-11-15)
 
 
