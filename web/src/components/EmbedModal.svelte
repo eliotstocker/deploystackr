@@ -15,18 +15,19 @@
 
     let embedUrl = $derived.by(() => {
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const params = new URLSearchParams({
-            service: serviceName
-        });
+        const params = new URLSearchParams();
         if(envName) {
             params.set('env', envName);
         }
         if(theme !== 'auto') {
             params.set('theme', theme);
         }
+        const query = params.toString();
+        const suffix = query ? `?${query}` : '';
+        const slug = encodeURIComponent(serviceName);
         return IS_DEMO
-            ? `${origin}${BASE_URL}#embed?${params.toString()}`
-            : `${origin}${BASE_URL}embed?${params.toString()}`;
+            ? `${origin}${BASE_URL}#embed/${slug}${suffix}`
+            : `${origin}${BASE_URL}embed/${slug}${suffix}`;
     });
 
     let iframeSnippet = $derived(
