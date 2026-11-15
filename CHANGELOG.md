@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/eliotstocker/deploystackr/compare/v1.2.1...v1.2.2) (2026-11-15)
+
+
+### Bug Fixes
+
+* **ui:** search all Iconify collections for service icons ([d13714e](https://github.com/eliotstocker/deploystackr/commit/d13714e231608120fbb9f15152b3e83bc87cb2b6))
+
 ## [1.2.1](https://github.com/eliotstocker/deploystackr/compare/v1.2.0...v1.2.1) (2026-11-15)
 
 
