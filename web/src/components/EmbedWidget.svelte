@@ -365,6 +365,12 @@
     });
 </script>
 
+<svelte:window onkeydown={e => {
+    if(e.key === 'Escape' && confirmingDeploy) {
+        confirmingDeploy = false;
+    }
+}}/>
+
 {#if isAuthPopup}
     <div class="embed-card" class:dark={isDark}>
         <div class="embed-status-msg">Signed in! You can close this window.</div>
@@ -493,24 +499,6 @@
                         <button class="embed-btn muted" type="button" disabled>
                             Up to date
                         </button>
-                    {:else if confirmingDeploy}
-                        <div class="embed-confirm-group">
-                            <button
-                                class="embed-btn secondary"
-                                type="button"
-                                onclick={() => (confirmingDeploy = false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                class="embed-btn confirm"
-                                type="button"
-                                onclick={handleDeploy}
-                                title="Confirm promotion of {formatShortVersion(latestVersion)} to {targetEnvName}"
-                            >
-                                Confirm {formatShortVersion(latestVersion)}
-                            </button>
-                        </div>
                     {:else}
                         <button
                             class="embed-btn primary"
@@ -529,6 +517,30 @@
                     {/if}
                 </div>
             </div>
+            {#if confirmingDeploy}
+                <div class="embed-confirm-overlay" role="dialog" aria-label="Confirm deployment">
+                    <div class="embed-confirm-copy">
+                        <span class="embed-confirm-title">Deploy <code>{formatShortVersion(latestVersion)}</code></span>
+                        <span class="embed-confirm-sub">to {targetEnvName}</span>
+                    </div>
+                    <div class="embed-confirm-group">
+                        <button
+                            class="embed-btn secondary"
+                            type="button"
+                            onclick={() => (confirmingDeploy = false)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            class="embed-btn confirm"
+                            type="button"
+                            onclick={handleDeploy}
+                        >
+                            Confirm
+                        </button>
+                    </div>
+                </div>
+            {/if}
             {#if deployError}
                 <div class="embed-inline-error" role="alert">{deployError}</div>
             {/if}
@@ -559,6 +571,8 @@
         --ew-red-bg: #fee2e2;
         --ew-red-text: #b91c1c;
 
+        position: relative;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -751,10 +765,48 @@
         flex-shrink: 0;
     }
 
+    .embed-confirm-overlay {
+        position: absolute;
+        inset: 0;
+        background: var(--ew-bg);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: inherit;
+        z-index: 10;
+    }
+
+    .embed-confirm-copy {
+        display: flex;
+        align-items: baseline;
+        gap: 5px;
+        flex-wrap: wrap;
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .embed-confirm-title code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        padding: 1px 6px;
+        border-radius: 6px;
+        background: var(--ew-pill-bg);
+    }
+
+    .embed-confirm-sub {
+        color: var(--ew-muted);
+        font-weight: 500;
+    }
+
     .embed-confirm-group {
         display: flex;
         align-items: center;
         gap: 6px;
+        flex-shrink: 0;
     }
 
     .embed-btn.confirm {
