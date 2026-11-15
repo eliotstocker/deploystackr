@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/eliotstocker/deploystackr/compare/v1.1.0...v1.2.0) (2026-11-15)
+
+
+### Features
+
+* **ui:** resolve service icons from Iconify with SVG fallback ([18274f9](https://github.com/eliotstocker/deploystackr/commit/18274f9c499205008f5d29779b26b25ad4996a82))
+
 # [1.1.0](https://github.com/eliotstocker/deploystackr/compare/v1.0.0...v1.1.0) (2026-11-15)
 
 
