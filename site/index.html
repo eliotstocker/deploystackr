@@ -32,7 +32,7 @@
 
 <header class="nav">
   <div class="nav-inner">
-    <a href="index.html" class="wordmark">deploystackr</a>
+    <a href="/" class="wordmark">deploystackr</a>
     <nav>
       <a href="#philosophy">Philosophy</a>
       <a href="#preview">Preview</a>
@@ -257,6 +257,24 @@
       const orig = btn.innerText;
       btn.innerText = 'Copied';
       setTimeout(() => btn.innerText = orig, 1600);
+    });
+  }
+  function selectTab(btn) {
+    const root = btn.closest('.tabs');
+    if (!root) return;
+    const targetId = btn.getAttribute('aria-controls');
+    root.querySelectorAll(':scope > nav .tabs__item').forEach((item) => {
+      const b = item.querySelector('.tabs__btn');
+      const active = b === btn;
+      item.classList.toggle('active', active);
+      if (b) b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    root.querySelectorAll(':scope > .tabs__panel').forEach((panel) => {
+      if (panel.id === targetId) {
+        panel.removeAttribute('hidden');
+      } else {
+        panel.setAttribute('hidden', '');
+      }
     });
   }
 

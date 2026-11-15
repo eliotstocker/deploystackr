@@ -282,10 +282,20 @@ main {
   opacity: 0.86;
 }
 
+.btn.sm,
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
 /* Sections */
 section {
   padding: 56px 0;
   border-top: 1px solid var(--border);
+}
+
+main > section:first-child {
+  border-top: none;
 }
 
 section:not(.hero) {
@@ -398,6 +408,12 @@ section > p {
   font-weight: 500;
 }
 
+.step-content .cta-row {
+  justify-content: flex-start;
+  margin-top: 12px;
+  gap: 10px;
+}
+
 /* Minimal CLI Command List (.cli-grid / :::cli) */
 .cli-grid {
   list-style: none;
@@ -477,6 +493,86 @@ section > p {
   font-size: 0.82rem;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+
+/* Tabbed Interface (.tabs / :::tabs) */
+.tabs {
+  margin-top: 24px;
+}
+
+.tabs__list {
+  position: relative;
+  anchor-scope: --active-tab;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  list-style: none;
+  margin: 0 0 28px;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs__list::before {
+  content: '';
+  position: absolute;
+  position-anchor: --active-tab;
+  inset-block-start: calc(anchor(bottom) - 1px);
+  inset-inline-start: anchor(left);
+  inset-inline-end: anchor(right);
+  block-size: 2px;
+  background: var(--gradient-from);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tabs__list::before {
+    transition: inset 0.2s ease;
+  }
+}
+
+.tabs__item {
+  margin-bottom: -1px;
+}
+
+.tabs__item.active {
+  anchor-name: --active-tab;
+}
+
+@supports not (position-anchor: auto) {
+  .tabs__item.active {
+    border-bottom: 2px solid var(--gradient-from);
+  }
+}
+
+.tabs__btn {
+  background: none;
+  border: none;
+  padding: 10px 2px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.tabs__btn:hover,
+.tabs__item.active .tabs__btn {
+  color: var(--fg);
+}
+
+.tabs__item.active .tabs__btn {
+  font-weight: 600;
+}
+
+.tabs__panel > p {
+  color: var(--muted);
+  margin: 0 0 16px;
+  font-size: 0.94rem;
+}
+
+.tabs .agent-prompt-box {
+  margin: 16px 0 0;
+  max-width: 100%;
 }
 
 /* Minimal Borderless Tables (Comparison Matrix) */
