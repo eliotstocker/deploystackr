@@ -10,11 +10,11 @@
     const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true';
     const BASE_URL = import.meta.env.BASE_URL || '/';
 
+    let embedMode = $state<'iframe' | 'badge'>('iframe');
     let theme = $state<'auto' | 'light' | 'dark'>('auto');
-    let copied = $state(false);
+    let copiedKey = $state<string | null>(null);
 
-    let embedUrl = $derived.by(() => {
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    let querySuffix = $derived.by(() => {
         const params = new URLSearchParams();
         if(envName) {
             params.set('env', envName);
@@ -23,22 +23,50 @@
             params.set('theme', theme);
         }
         const query = params.toString();
-        const suffix = query ? `?${query}` : '';
+        return query ? `?${query}` : '';
+    });
+
+    let embedUrl = $derived.by(() => {
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const slug = encodeURIComponent(serviceName);
         return IS_DEMO
-            ? `${origin}${BASE_URL}#embed/${slug}${suffix}`
-            : `${origin}${BASE_URL}embed/${slug}${suffix}`;
+            ? `${origin}${BASE_URL}#embed/${slug}${querySuffix}`
+            : `${origin}${BASE_URL}embed/${slug}${querySuffix}`;
+    });
+
+    let serviceUrl = $derived.by(() => {
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const slug = encodeURIComponent(serviceName);
+        return IS_DEMO
+            ? `${origin}${BASE_URL}#${slug}`
+            : `${origin}${BASE_URL}${slug}`;
+    });
+
+    let badgeUrl = $derived.by(() => {
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const slug = encodeURIComponent(serviceName);
+        return `${origin}${BASE_URL}badge/${slug}.svg${querySuffix}`;
     });
 
     let iframeSnippet = $derived(
         `<iframe src="${embedUrl}" width="420" height="84" frameborder="0" allowtransparency="true" style="border:0;background:transparent;"></iframe>`
     );
 
-    function copySnippet() {
-        navigator.clipboard.writeText(iframeSnippet).then(() => {
-            copied = true;
+    let badgeMarkdownSnippet = $derived(
+        `[![${serviceName}](${badgeUrl})](${serviceUrl})`
+    );
+
+    let badgeHtmlSnippet = $derived(
+        `<a href="${serviceUrl}"><img src="${badgeUrl}" alt="${serviceName}" /></a>`
+    );
+
+    function copyText(key: string, value: string) {
+        navigator.clipboard.writeText(value).then(() => {
+            copiedKey = key;
             window.setTimeout(() => {
-                copied = false;
+                if(copiedKey === key) {
+                    copiedKey = null;
+                }
             }, 2000);
         });
     }
@@ -83,6 +111,14 @@
 
         <div class="embed-modal-body">
             <div class="theme-row">
+                <span class="field-label">Format</span>
+                <div class="theme-pills">
+                    <button type="button" class:active={embedMode === 'iframe'} onclick={() => embedMode = 'iframe'}>Interactive Widget</button>
+                    <button type="button" class:active={embedMode === 'badge'} onclick={() => embedMode = 'badge'}>SVG Badge</button>
+                </div>
+            </div>
+
+            <div class="theme-row">
                 <span class="field-label">Theme</span>
                 <div class="theme-pills">
                     <button type="button" class:active={theme === 'auto'} onclick={() => theme = 'auto'}>Auto</button>
@@ -91,27 +127,58 @@
                 </div>
             </div>
 
-            <div class="preview-box">
-                <span class="field-label">Preview</span>
-                <iframe
-                    src={embedUrl}
-                    title="Embed widget preview"
-                    width="100%"
-                    height="84"
-                    frameborder="0"
-                    style="border:0;background:transparent;"
-                ></iframe>
-            </div>
-
-            <div class="snippet-box">
-                <div class="snippet-header">
-                    <span class="field-label">HTML Embed Code</span>
-                    <button class="copy-btn" type="button" onclick={copySnippet}>
-                        {copied ? 'Copied!' : 'Copy HTML'}
-                    </button>
+            {#if embedMode === 'iframe'}
+                <div class="preview-box">
+                    <span class="field-label">Preview</span>
+                    <iframe
+                        src={embedUrl}
+                        title="Embed widget preview"
+                        width="100%"
+                        height="84"
+                        frameborder="0"
+                        style="border:0;background:transparent;"
+                    ></iframe>
                 </div>
-                <pre><code>{iframeSnippet}</code></pre>
-            </div>
+
+                <div class="snippet-box">
+                    <div class="snippet-header">
+                        <span class="field-label">HTML Embed Code</span>
+                        <button class="copy-btn" type="button" onclick={copyText.bind(null, 'iframe', iframeSnippet)}>
+                            {copiedKey === 'iframe' ? 'Copied!' : 'Copy HTML'}
+                        </button>
+                    </div>
+                    <pre><code>{iframeSnippet}</code></pre>
+                </div>
+            {:else}
+                <div class="preview-box">
+                    <span class="field-label">Preview (links to service)</span>
+                    <div class="badge-preview-surface">
+                        <a href={serviceUrl} target="_blank" rel="noopener noreferrer" class="badge-preview-link">
+                            <img src={badgeUrl} alt="{serviceName} status badge"/>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="snippet-box">
+                    <div class="snippet-header">
+                        <span class="field-label">Markdown</span>
+                        <button class="copy-btn" type="button" onclick={copyText.bind(null, 'md', badgeMarkdownSnippet)}>
+                            {copiedKey === 'md' ? 'Copied!' : 'Copy Markdown'}
+                        </button>
+                    </div>
+                    <pre><code>{badgeMarkdownSnippet}</code></pre>
+                </div>
+
+                <div class="snippet-box">
+                    <div class="snippet-header">
+                        <span class="field-label">HTML</span>
+                        <button class="copy-btn" type="button" onclick={copyText.bind(null, 'html', badgeHtmlSnippet)}>
+                            {copiedKey === 'html' ? 'Copied!' : 'Copy HTML'}
+                        </button>
+                    </div>
+                    <pre><code>{badgeHtmlSnippet}</code></pre>
+                </div>
+            {/if}
         </div>
     </div>
 </div>
@@ -230,6 +297,27 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+    }
+
+    .badge-preview-surface {
+        display: flex;
+        align-items: center;
+        min-height: 52px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px dashed rgba(148, 163, 184, 0.3);
+        background: rgba(148, 163, 184, 0.06);
+    }
+
+    .badge-preview-link {
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+    }
+
+    .badge-preview-link img {
+        display: block;
+        height: 28px;
     }
 
     .snippet-header {

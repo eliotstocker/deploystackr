@@ -107,6 +107,7 @@ func (s *Server) routes() {
 
 	s.mux.HandleFunc("/api/services", s.handleServices)
 	s.mux.HandleFunc("/api/services/", s.handleServiceSubroutes)
+	s.mux.HandleFunc("/badge/", s.handleBadge)
 	s.mux.HandleFunc("/api/promote", s.handlePromote)
 	s.mux.HandleFunc("/api/webhooks/release", s.handleWebhookRelease)
 	s.mux.HandleFunc("/api/webhooks/pr", s.handleWebhookPR)
