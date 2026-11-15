@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/eliotstocker/deploystackr/compare/v1.2.5...v1.3.0) (2026-11-15)
+
+
+### Features
+
+* **web:** add embeddable GitOps promotion widget ([#2](https://github.com/eliotstocker/deploystackr/issues/2)) ([427e519](https://github.com/eliotstocker/deploystackr/commit/427e519e6d75542f459ec4e1456693619bca9618))
+
 ## [1.2.5](https://github.com/eliotstocker/deploystackr/compare/v1.2.4...v1.2.5) (2026-11-15)
 
 
