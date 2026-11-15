@@ -1048,6 +1048,7 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request, serviceN
 		versions = []provider.VersionInfo{}
 	} else if len(versions) > 0 {
 		s.enrichVersionsFromContext(r.Context(), versions, svcCfg)
+		versions = provider.DeduplicateVersionsByDigest(versions)
 		verStrs := make([]string, 0, len(versions))
 		for _, v := range versions {
 			verStrs = append(verStrs, v.Version)
@@ -1145,6 +1146,7 @@ func (s *Server) handleReleasePRs(w http.ResponseWriter, r *http.Request, servic
 	}
 	if len(versions) > 0 {
 		s.enrichVersionsFromContext(r.Context(), versions, svcCfg)
+		versions = provider.DeduplicateVersionsByDigest(versions)
 	}
 
 	result := make(map[string][]int)

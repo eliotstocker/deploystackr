@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"deploystackr/pkg/config"
@@ -20,6 +21,7 @@ import (
 // VersionInfo represents an available deployable version candidate.
 type VersionInfo struct {
 	Version     string     `json:"version"`
+	Digest      string     `json:"digest,omitempty"`
 	ReleasedAt  *time.Time `json:"released_at,omitempty"`
 	Prerelease  bool       `json:"prerelease"`
 	Description string     `json:"description,omitempty"`
@@ -200,8 +202,10 @@ func (p *OCIProvider) GetVersions(ctx context.Context) ([]VersionInfo, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	_, _, authHeader, hasAuth := config.GetRegistryAuth(host)
+	effectiveAuthHeader := ""
 	if hasAuth && authHeader != "" {
-		req.Header.Set("Authorization", authHeader)
+		effectiveAuthHeader = authHeader
+		req.Header.Set("Authorization", effectiveAuthHeader)
 	}
 
 	resp, err := client.Do(req)
@@ -217,9 +221,10 @@ func (p *OCIProvider) GetVersions(ctx context.Context) ([]VersionInfo, error) {
 		realm, service, scope := parseBearerChallenge(authHdr, fmt.Sprintf("repository:%s:pull", path))
 		if realm != "" {
 			if token := fetchRegistryToken(ctx, client, realm, service, scope, authHeader); token != "" {
+				effectiveAuthHeader = "Bearer " + token
 				retryReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 				if err == nil {
-					retryReq.Header.Set("Authorization", "Bearer "+token)
+					retryReq.Header.Set("Authorization", effectiveAuthHeader)
 					resp, err = client.Do(retryReq)
 					if err != nil {
 						return fallbackVersions(p.cfg.Filter, p.cfg.TrimPrefix), nil
@@ -245,20 +250,77 @@ func (p *OCIProvider) GetVersions(ctx context.Context) ([]VersionInfo, error) {
 	}
 
 	var versions []VersionInfo
-	for _, tag := range ociResp.Tags {
-		if filterRe != nil && !filterRe.MatchString(tag) {
+	var rawTags []string
+	for _, rawTag := range ociResp.Tags {
+		if filterRe != nil && !filterRe.MatchString(rawTag) {
 			continue
 		}
+		tag := rawTag
 		if p.cfg.TrimPrefix != "" {
 			tag = strings.TrimPrefix(tag, p.cfg.TrimPrefix)
 		}
+		rawTags = append(rawTags, rawTag)
 		versions = append(versions, VersionInfo{
 			Version: tag,
 		})
 	}
 
+	if len(versions) > 0 {
+		populateOCIDigests(ctx, client, scheme, host, path, rawTags, versions, effectiveAuthHeader)
+	}
+
 	sortVersions(versions)
 	return versions, nil
+}
+
+const ociManifestAcceptHeader = "application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.v1+json"
+
+func populateOCIDigests(ctx context.Context, client *http.Client, scheme, host, path string, rawTags []string, versions []VersionInfo, authHeader string) {
+	const maxWorkers = 12
+	workers := len(versions)
+	if workers > maxWorkers {
+		workers = maxWorkers
+	}
+
+	jobs := make(chan int, len(versions))
+	for i := range versions {
+		jobs <- i
+	}
+	close(jobs)
+
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for idx := range jobs {
+				versions[idx].Digest = fetchOCITagDigest(ctx, client, scheme, host, path, rawTags[idx], authHeader)
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+func fetchOCITagDigest(ctx context.Context, client *http.Client, scheme, host, path, tag, authHeader string) string {
+	manifestURL := fmt.Sprintf("%s://%s/v2/%s/manifests/%s", scheme, host, path, url.PathEscape(tag))
+	req, err := http.NewRequestWithContext(ctx, "HEAD", manifestURL, nil)
+	if err != nil {
+		return ""
+	}
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
+	req.Header.Set("Accept", ociManifestAcceptHeader)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+	return strings.TrimSpace(resp.Header.Get("Docker-Content-Digest"))
 }
 
 func parseBearerChallenge(header, defaultScope string) (realm, service, scope string) {
@@ -441,4 +503,95 @@ func compareVersions(a, b string) int {
 	}
 
 	return 0
+}
+
+// DeduplicateVersionsByDigest collapses versions that share the same non-empty Digest,
+// preferring candidates with context info, then more specific version tags.
+func DeduplicateVersionsByDigest(versions []VersionInfo) []VersionInfo {
+	if len(versions) < 2 {
+		return versions
+	}
+
+	bestByDigest := make(map[string]VersionInfo)
+	for _, v := range versions {
+		if v.Digest == "" {
+			continue
+		}
+		cur, exists := bestByDigest[v.Digest]
+		if !exists || isBetterVersionCandidate(v, cur) {
+			bestByDigest[v.Digest] = v
+		}
+	}
+
+	if len(bestByDigest) == 0 {
+		return versions
+	}
+
+	emitted := make(map[string]bool, len(bestByDigest))
+	out := make([]VersionInfo, 0, len(versions))
+	for _, v := range versions {
+		if v.Digest == "" {
+			out = append(out, v)
+			continue
+		}
+		if emitted[v.Digest] {
+			continue
+		}
+		if bestByDigest[v.Digest].Version == v.Version {
+			out = append(out, v)
+			emitted[v.Digest] = true
+		}
+	}
+	return out
+}
+
+func isBetterVersionCandidate(a, b VersionInfo) bool {
+	aCtx := hasContextInfo(a)
+	bCtx := hasContextInfo(b)
+	if aCtx != bCtx {
+		return aCtx
+	}
+
+	if aCtx && bCtx {
+		aNotes := a.Changelog != "" || a.Description != ""
+		bNotes := b.Changelog != "" || b.Description != ""
+		if aNotes != bNotes {
+			return aNotes
+		}
+	}
+
+	aNum := isNumericVersion(a.Version)
+	bNum := isNumericVersion(b.Version)
+	if aNum != bNum {
+		return aNum
+	}
+
+	aSegs := versionSegmentCount(a.Version)
+	bSegs := versionSegmentCount(b.Version)
+	if aSegs != bSegs {
+		return aSegs > bSegs
+	}
+
+	if len(a.Version) != len(b.Version) {
+		return len(a.Version) > len(b.Version)
+	}
+
+	return compareVersions(a.Version, b.Version) > 0
+}
+
+func hasContextInfo(v VersionInfo) bool {
+	return v.Changelog != "" || v.Description != "" || v.ReleasedAt != nil
+}
+
+func isNumericVersion(v string) bool {
+	clean := strings.TrimPrefix(v, "v")
+	if clean == "" {
+		return false
+	}
+	return clean[0] >= '0' && clean[0] <= '9'
+}
+
+func versionSegmentCount(v string) int {
+	clean := strings.TrimPrefix(v, "v")
+	return len(strings.FieldsFunc(clean, func(r rune) bool { return r == '.' || r == '-' }))
 }

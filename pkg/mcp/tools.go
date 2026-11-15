@@ -1242,6 +1242,7 @@ func (s *Server) fetchServiceVersions(ctx context.Context, svcName string, svcCf
 		versions, err := prov.GetVersions(ctx)
 		if err == nil && len(versions) > 0 {
 			s.enrichVersionsFromContext(ctx, versions, svcCfg)
+			versions = provider.DeduplicateVersionsByDigest(versions)
 			if s.deps.Store != nil {
 				verStrs := make([]string, 0, len(versions))
 				for _, v := range versions {

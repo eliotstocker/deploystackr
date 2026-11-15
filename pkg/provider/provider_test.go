@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"deploystackr/pkg/config"
 )
@@ -171,4 +172,110 @@ func TestOCIProvider_TrimPrefix(t *testing.T) {
 	if versions[0].Version != "12.4" || versions[1].Version != "12.3" {
 		t.Fatalf("expected trimmed versions, got %+v", versions)
 	}
+}
+
+func TestOCIProvider_PopulatesDigests(t *testing.T) {
+	digests := map[string]string{
+		"v1.2":           "sha256:aaa",
+		"v1.2.0":         "sha256:aaa",
+		"v1.2.0-fun":     "sha256:aaa",
+		"v1.3.0":         "sha256:bbb",
+		"latest":         "sha256:bbb",
+	}
+
+	regServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v2/myorg/myapp/tags/list" {
+			_ = json.NewEncoder(w).Encode(ociTagsResponse{
+				Name: "myorg/myapp",
+				Tags: []string{"v1.2", "v1.2.0", "v1.2.0-fun", "v1.3.0", "latest"},
+			})
+			return
+		}
+		if r.Method == http.MethodHead && strings.HasPrefix(r.URL.Path, "/v2/myorg/myapp/manifests/") {
+			tag := strings.TrimPrefix(r.URL.Path, "/v2/myorg/myapp/manifests/")
+			if d, ok := digests[tag]; ok {
+				w.Header().Set("Docker-Content-Digest", d)
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer regServer.Close()
+
+	regHost := regServer.URL[len("http://"):]
+	p := NewProvider(config.SourceConfig{
+		Type:       "oci",
+		Repository: regHost + "/myorg/myapp",
+		TrimPrefix: "v",
+	})
+
+	versions, err := p.GetVersions(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(versions) != 5 {
+		t.Fatalf("expected 5 versions before deduplication, got %d", len(versions))
+	}
+
+	gotDigests := make(map[string]string, len(versions))
+	for _, v := range versions {
+		gotDigests[v.Version] = v.Digest
+	}
+	if gotDigests["1.2"] != "sha256:aaa" || gotDigests["1.2.0"] != "sha256:aaa" || gotDigests["1.2.0-fun"] != "sha256:aaa" {
+		t.Fatalf("expected sha256:aaa for 1.2* tags, got %+v", gotDigests)
+	}
+	if gotDigests["1.3.0"] != "sha256:bbb" || gotDigests["latest"] != "sha256:bbb" {
+		t.Fatalf("expected sha256:bbb for 1.3.0 and latest, got %+v", gotDigests)
+	}
+}
+
+func TestDeduplicateVersionsByDigest(t *testing.T) {
+	now := time.Now()
+
+	t.Run("default picks more specific version", func(t *testing.T) {
+		input := []VersionInfo{
+			{Version: "latest", Digest: "sha256:bbb"},
+			{Version: "1.3.0", Digest: "sha256:bbb"},
+			{Version: "1.2.0", Digest: "sha256:aaa"},
+			{Version: "1.2", Digest: "sha256:aaa"},
+			{Version: "1.1.0", Digest: ""},
+		}
+
+		got := DeduplicateVersionsByDigest(input)
+		if len(got) != 3 {
+			t.Fatalf("expected 3 versions, got %d: %+v", len(got), got)
+		}
+		if got[0].Version != "1.3.0" || got[1].Version != "1.2.0" || got[2].Version != "1.1.0" {
+			t.Fatalf("unexpected deduplicated versions: %+v", got)
+		}
+	})
+
+	t.Run("default picks suffix when no context", func(t *testing.T) {
+		input := []VersionInfo{
+			{Version: "1.2.0-funthings", Digest: "sha256:aaa"},
+			{Version: "1.2.0", Digest: "sha256:aaa"},
+			{Version: "1.2", Digest: "sha256:aaa"},
+		}
+
+		got := DeduplicateVersionsByDigest(input)
+		if len(got) != 1 || got[0].Version != "1.2.0-funthings" {
+			t.Fatalf("expected 1.2.0-funthings, got %+v", got)
+		}
+	})
+
+	t.Run("context info overrides default specificity", func(t *testing.T) {
+		input := []VersionInfo{
+			{Version: "1.2.0-funthings", Digest: "sha256:aaa"},
+			{Version: "1.2.0", Digest: "sha256:aaa", Changelog: "### Features\n- Something", ReleasedAt: &now},
+			{Version: "1.2", Digest: "sha256:aaa"},
+		}
+
+		got := DeduplicateVersionsByDigest(input)
+		if len(got) != 1 || got[0].Version != "1.2.0" {
+			t.Fatalf("expected 1.2.0 with context info to win, got %+v", got)
+		}
+	})
 }
