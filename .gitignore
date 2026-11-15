@@ -3,8 +3,9 @@ deploystackr
 *.exe
 *.test
 
-# Web dependencies
+# Web dependencies & demo build
 web/node_modules/
+site/demo/
 
 # Demo / Scratch Git repos
 .demo-gitops/

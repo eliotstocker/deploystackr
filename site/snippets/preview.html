@@ -1,79 +1,27 @@
-<div class="mock-stage">
+<div class="mock-stage demo-launch-card">
   <div class="mock-titlebar">
     <div class="mock-dots">
       <span class="mock-dot red"></span>
       <span class="mock-dot yellow"></span>
       <span class="mock-dot green"></span>
     </div>
-    <span class="mock-title">deploystackr — service catalog</span>
-    <span></span>
+    <span class="mock-title">deploystackr — interactive browser demo</span>
+    <a href="/demo/" class="demo-launch-pill">Open Demo &nearr;</a>
   </div>
 
-  <div class="mock-content">
-    <table class="mock-table">
-      <thead>
-        <tr>
-          <th>Service</th>
-          <th>Upstream Source</th>
-          <th>Staging</th>
-          <th>Production</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>billing-service</strong></td>
-          <td><span class="badge-tag">ghcr.io/org/billing</span></td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="status-dot-live" title="Active"></span>
-              <code>v2.4.0</code>
-            </div>
-          </td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="status-ring-pending" title="PR #142 Pending"></span>
-              <code>v2.3.9</code>
-              <span class="badge-tag" style="color:var(--accent-amber);background:rgba(251,191,36,0.1);">PR #142</span>
-            </div>
-          </td>
-          <td><a href="#preview" class="btn" style="padding:6px 12px;font-size:0.8rem;">Promote</a></td>
-        </tr>
-        <tr>
-          <td><strong>auth-service</strong></td>
-          <td><span class="badge-tag">github_releases</span></td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="status-dot-live" title="Active"></span>
-              <code>v1.8.2</code>
-            </div>
-          </td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="status-dot-live" title="Active"></span>
-              <code>v1.8.2</code>
-            </div>
-          </td>
-          <td><a href="#preview" class="btn" style="padding:6px 12px;font-size:0.8rem;">Promote</a></td>
-        </tr>
-        <tr>
-          <td><strong>notification-service</strong></td>
-          <td><span class="badge-tag">git_tags</span></td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="status-dot-live" title="Active"></span>
-              <code>v3.1.0</code>
-            </div>
-          </td>
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="status-dot-live" title="Active"></span>
-              <code>v3.0.4</code>
-            </div>
-          </td>
-          <td><a href="#preview" class="btn" style="padding:6px 12px;font-size:0.8rem;">Promote</a></td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="mock-content demo-launch-body">
+    <div class="demo-launch-copy">
+      <h3>Try the real DeployStackr UI in your browser</h3>
+      <p>
+        Explore the actual Svelte 5 dashboard backed by a local in-browser emulator.
+        Inspect commit diffs, browse Git audit history, switch RBAC personas, and trigger
+        promotions to watch environments transition through <code>pending</code>,
+        <code>deploying</code>, and <code>ready</code> in real time.
+      </p>
+      <div class="demo-launch-actions">
+        <a href="/demo/" class="btn btn-primary">Launch Interactive Demo</a>
+        <span class="demo-launch-note">Runs 100% client-side — no login or cluster required</span>
+      </div>
+    </div>
   </div>
 </div>

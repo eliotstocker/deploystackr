@@ -264,7 +264,10 @@
 
   $effect(() => {
     const svcName = service.service;
-    if(svcName) {
+    const envSnapshot = Object.entries(service.environments || {})
+      .map(([k, v]) => `${k}:${v.active_version}:${v.cluster_status?.status || ''}:${v.pending_pr?.pr_number || ''}`)
+      .join('|');
+    if(svcName && envSnapshot !== undefined) {
       fetchServiceStatus(svcName)
         .then(res => {
           liveClusterStatuses = res;

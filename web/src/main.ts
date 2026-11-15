@@ -9,14 +9,15 @@ const app = mount(App, {
   target,
 })
 
-// Register service worker for PWA installability
-if ('serviceWorker' in navigator && !import.meta.env.DEV) {
+// Register service worker for PWA installability (skip in static demo mode)
+const isDemo = import.meta.env.VITE_DEMO_MODE === 'true';
+if (!isDemo && 'serviceWorker' in navigator && !import.meta.env.DEV) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((err) => {
       console.warn('Service worker registration failed:', err);
     });
   });
-} else if ('serviceWorker' in navigator) {
+} else if (!isDemo && 'serviceWorker' in navigator) {
   // Also register in dev mode if sw.js is available
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }

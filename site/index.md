@@ -6,7 +6,8 @@ Safely bump image tags in Git with 1 click, preview exact commit diffs, and insp
 
 :::cta
 - `curl -fsSL https://deploystac.kr/install.sh | bash`
-- [View on GitHub](https://github.com/eliotstocker/deploystackr){.btn-primary}
+- [Try Live Demo](/demo/){.btn-primary}
+- [View on GitHub](https://github.com/eliotstocker/deploystackr)
 :::
 
 ## Core Philosophy {#philosophy}

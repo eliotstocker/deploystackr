@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      - 'web/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -26,6 +27,8 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
+      - run: npm --prefix web ci
+      - run: npm --prefix web run build:demo
       - run: npm run build:site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

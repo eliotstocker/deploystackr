@@ -900,3 +900,40 @@ footer .stackr-app-item:hover {
   50% { transform: scale(1.3); opacity: 0.6; }
   100% { transform: scale(0.9); opacity: 1; }
 }
+
+.demo-launch-pill {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent-cyan);
+  text-decoration: none;
+}
+
+.demo-launch-pill:hover {
+  text-decoration: underline;
+}
+
+.demo-launch-body {
+  padding: 28px 24px;
+}
+
+.demo-launch-copy h3 {
+  margin: 0 0 10px;
+}
+
+.demo-launch-copy p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  max-width: 68ch;
+}
+
+.demo-launch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.demo-launch-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+}

@@ -12,6 +12,7 @@
 Safely bump image tags in Git with 1 click, preview exact commit diffs, and inspect audit tenure with zero database overhead.
 
 - `curl -fsSL https://deploystac.kr/install.sh | bash`
+- [Try Live Demo](/demo/)
 - [View on GitHub](https://github.com/eliotstocker/deploystackr)
 
 ## Core Philosophy 

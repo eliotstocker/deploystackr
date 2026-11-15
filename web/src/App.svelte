@@ -12,11 +12,31 @@
   import ServiceIcon from './components/ServiceIcon.svelte';
   import { sortEnvironments } from './lib/envPriority';
 
+  const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true';
+  const BASE_URL = import.meta.env.BASE_URL || '/';
+
   function getSlugFromPath(): string {
     if (typeof window !== 'undefined') {
-      return window.location.pathname.replace(/^\/+|\/+$/g, '');
+      if (IS_DEMO) {
+        return window.location.hash.replace(/^#\/?/, '');
+      }
+      const path = window.location.pathname;
+      const trimmed = path.startsWith(BASE_URL) ? path.slice(BASE_URL.length) : path;
+      return trimmed.replace(/^\/+|\/+$/g, '');
     }
     return '';
+  }
+
+  function updateUrlSlug(svcName: string, replace = false) {
+    if (typeof window === 'undefined') return;
+    const nextUrl = IS_DEMO
+      ? (svcName ? `${BASE_URL}#${svcName}` : BASE_URL)
+      : (svcName ? `${BASE_URL}${svcName}` : BASE_URL);
+    if (replace) {
+      window.history.replaceState(null, '', nextUrl);
+    } else {
+      window.history.pushState(null, '', nextUrl);
+    }
   }
 
   function formatShortVersion(v?: string): string {
@@ -205,9 +225,7 @@
         const savedSlug = saved.replace(/^\/+/, '').split('?')[0];
         if (savedSlug && list.some((s) => s.service === savedSlug)) {
           slug = savedSlug;
-          if (typeof window !== 'undefined') {
-            window.history.replaceState(null, '', `/${savedSlug}`);
-          }
+          updateUrlSlug(savedSlug, true);
         }
       }
 
@@ -254,7 +272,7 @@
       }
       const currentSlug = getSlugFromPath();
       if (currentSlug !== svcName) {
-        window.history.pushState(null, '', `/${svcName}`);
+        updateUrlSlug(svcName);
       }
     } else {
       if (typeof localStorage !== 'undefined') {
@@ -263,7 +281,7 @@
       if (isMobile) {
         mobileActivePane = mobileReturnPane || 'overview';
       }
-      window.history.pushState(null, '', '/');
+      updateUrlSlug('');
     }
   }
 
@@ -275,7 +293,7 @@
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('deploystackr_return_to');
     }
-    window.history.pushState(null, '', '/');
+    updateUrlSlug('');
   }
 
   function handleOpenPromote(svc: ServiceResponse, envName?: string, targetVersion?: string) {
@@ -410,7 +428,9 @@
       console.error(e);
     }
     currentUser = null;
-    window.location.href = '/';
+    if (!IS_DEMO) {
+      window.location.href = BASE_URL;
+    }
   }
 </script>
 
