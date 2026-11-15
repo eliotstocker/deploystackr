@@ -1,0 +1,15 @@
+# Binaries
+deploystackr
+*.exe
+*.test
+
+# Web dependencies
+web/node_modules/
+
+# Demo / Scratch Git repos
+.demo-gitops/
+
+# OS / Editor
+.DS_Store
+*.swp
+node_modules/

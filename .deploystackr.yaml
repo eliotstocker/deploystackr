@@ -1,0 +1,57 @@
+version: "1"
+
+# In-repo GitOps configuration
+gitops:
+  # The GitOps repository holding Kubernetes manifests (can use SSH or HTTPS remotes)
+  repo: "git@github.com:eliotstocker/gitops-cluster.git"
+  branch: "main"
+
+services:
+  api-service:
+    display_name: "Core API"
+    icon: "server"
+    source:
+      type: "oci"
+      repository: "ghcr.io/eliotstocker/api-service"
+      filter: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    context:
+      repo: "eliotstocker/api-service"
+      changelog_strategy: "git_diff"
+    environments:
+      staging:
+        branch: "main"
+        target:
+          file: "apps/api-service/staging/deployment.yaml"
+          path: "$.spec.template.spec.containers[0].image"
+        write_strategy:
+          mode: "direct"
+          commit_message: "chore(staging): bump api-service to {{ .TargetVersion }}"
+      production:
+        branch: "main"
+        target:
+          file: "apps/api-service/production/deployment.yaml"
+          path: "$.spec.template.spec.containers[0].image"
+        write_strategy:
+          mode: "pull_request"
+          title: "Promote api-service to {{ .TargetVersion }}"
+          body: "Promoted via DeployStackr by {{ .User }}"
+
+  web-frontend:
+    display_name: "Web Frontend"
+    icon: "globe"
+    source:
+      type: "oci"
+      repository: "ghcr.io/eliotstocker/web-frontend"
+      filter: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    context:
+      repo: "eliotstocker/web-frontend"
+      changelog_strategy: "git_diff"
+    environments:
+      production:
+        branch: "main"
+        target:
+          file: "apps/web-frontend/deployment.yaml"
+          path: "$.spec.template.spec.containers[0].image"
+        write_strategy:
+          mode: "direct"
+          commit_message: "chore(production): bump web-frontend to {{ .TargetVersion }}"

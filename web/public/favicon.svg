@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512" fill="none">
+  <rect width="100" height="100" rx="22" fill="#4f46e5" />
+  <defs>
+    <linearGradient id="dolphinGrad" x1="85%" y1="15%" x2="15%" y2="85%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#94a3b8" />
+    </linearGradient>
+    <linearGradient id="dolphinGradLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#f8fafc" stop-opacity="0.65" />
+    </linearGradient>
+  </defs>
+
+  <!-- Falcate Dorsal Fin -->
+  <path d="M 44 28 C 42 16 37 7 30 5 C 27 13 26 23 28 34 Z" 
+        fill="url(#dolphinGrad)" />
+
+  <!-- Upper Body / Dark Dorsal Cape (Melon, Snout Top, Back) -->
+  <path d="M 16 62 
+           C 19 44 32 28 54 27 
+           C 68 26 77 34 81 40 
+           C 84 42.5 89 45 94 47.5 
+           C 95 48.5 94 50 92 51 
+           C 86 52.5 78 54 70 54.5 
+           C 54 55.5 38 56 16 62 Z" 
+        fill="url(#dolphinGrad)" />
+
+  <!-- Lighter Countershaded Underbelly & Pectoral Flipper -->
+  <path d="M 16 62 
+           C 38 56 54 55.5 70 54.5 
+           C 78 54 86 52.5 92 51 
+           C 90 53.5 84 55.5 78 57 
+           C 71 59.5 63 65 58 75 
+           C 56 79 53 79 54 73 
+           C 55 66 52 64 45 66 
+           C 34 69 24 68 16 62 Z" 
+        fill="url(#dolphinGradLight)" />
+</svg>

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: deploystackr-scratch-pvc
+  namespace: deploystackr
+  labels:
+    app.kubernetes.io/name: deploystackr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+web/node_modules
+web/dist
+deploystackr
+*.exe
+*.test
+screenshots
+site
+tmp
+.demo-gitops
+.DS_Store
+*.swp

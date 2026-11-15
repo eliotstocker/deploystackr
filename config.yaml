@@ -1,0 +1,62 @@
+version: "1"
+
+# Default GitOps repository (can be overridden per environment)
+gitops:
+  repo: "git@github.com:org/gitops-manifests.git"
+  branch: "main"
+
+services:
+  billing-service:
+    source:
+      type: "oci" # "oci" | "github_releases" | "git_tags"
+      repository: "ghcr.io/org/billing-service"
+      filter: "^v[0-9]+\\.[0-9]+\\.[0-9]+$" # SemVer regex filter
+    context:
+      repo: "org/billing-service" # Source repo for commit diffs & release notes
+      changelog_strategy: "git_diff"
+    environments:
+      staging:
+        branch: "main"
+        target:
+          file: "apps/staging/billing/values.yaml"
+          path: "$.image.tag" # Path to the scalar to mutate
+        write_strategy:
+          mode: "direct" # Commit directly to the branch
+          commit_message: "chore(staging): promote billing-service to {{ .TargetVersion }}"
+      production:
+        repo: "git@github.com:org/prod-gitops.git" # Multi-repo override
+        branch: "main"
+        target:
+          file: "apps/production/billing/deployment.json"
+          path: "$.spec.template.spec.containers[0].image"
+        write_strategy:
+          mode: "pull_request" # Create a branch and open a PR
+          title: "Promote billing-service to {{ .TargetVersion }}"
+          body: "Promoted via DeployStackr by {{ .User }}"
+
+  auth-service:
+    source:
+      type: "github_releases"
+      repository: "org/auth-service"
+      filter: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    context:
+      repo: "org/auth-service"
+      changelog_strategy: "git_diff"
+    environments:
+      staging:
+        branch: "main"
+        target:
+          file: "apps/staging/auth/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "direct"
+          commit_message: "chore(staging): promote auth-service to {{ .TargetVersion }}"
+      production:
+        branch: "main"
+        target:
+          file: "apps/production/auth/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "pull_request"
+          title: "Promote auth-service to {{ .TargetVersion }}"
+          body: "Promoted via DeployStackr by {{ .User }}"

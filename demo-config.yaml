@@ -1,0 +1,149 @@
+version: "1"
+
+gitops:
+  repo: "/Users/eliotstocker/VersionControl/deploystackr/.demo-gitops"
+  branch: "main"
+
+environment_priority:
+  - production
+  - preprod
+  - staging
+  - dev
+
+webhooks:
+  - event: "deployment_requested"
+    endpoint: "https://httpbin.org/post"
+    headers:
+      Content-Type: "application/json"
+      X-DeployStackr-Event: "deployment_requested"
+    payload: '{"event":"deployment_requested","service":"{{ .Service }}","environment":"{{ .Environment }}","version":"{{ .TargetVersion }}","requested_by":"{{ .User }}"}'
+
+  - event: "new_version_available"
+    endpoint: "https://httpbin.org/post"
+    headers:
+      Content-Type: "application/json"
+    payload: '{"event":"new_version_available","service":"{{ .Service }}","version":"{{ .Version }}","summary":"{{ .Description }}"}'
+
+services:
+  billing-service:
+    display_name: "Billing Service"
+    icon: "payments"
+    source:
+      type: "oci"
+      repository: "ghcr.io/org/billing-service"
+      filter: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    context:
+      repo: "/Users/eliotstocker/VersionControl/deploystackr/.demo-gitops"
+      changelog_strategy: "git_diff"
+    permissions:
+      github_teams:
+        - "org/billing-team"
+        - "org/platform-team"
+      google_groups:
+        - "billing-engineers@example.com"
+        - "platform-engineers@example.com"
+      require_repo_access: "write"
+    environments:
+      staging:
+        branch: "main"
+        target:
+          file: "apps/staging/billing/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "direct"
+          commit_message: "chore(staging): promote billing-service to {{ .TargetVersion }}"
+      preprod:
+        branch: "main"
+        target:
+          file: "apps/preprod/billing/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "direct"
+          commit_message: "chore(preprod): promote billing-service to {{ .TargetVersion }}"
+      production:
+        branch: "main"
+        target:
+          file: "apps/production/billing/deployment.json"
+          path: "$.spec.template.spec.containers[0].image"
+        write_strategy:
+          mode: "pull_request"
+          title: "Promote billing-service to {{ .TargetVersion }}"
+          body: "Promoted via DeployStackr by {{ .User }}"
+
+  auth-service:
+    display_name: "Auth Service"
+    icon: "lock"
+    source:
+      type: "github_releases"
+      repository: "org/auth-service"
+      filter: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    context:
+      repo: "/Users/eliotstocker/VersionControl/deploystackr/.demo-gitops"
+      changelog_strategy: "git_diff"
+    permissions:
+      github_teams:
+        - "org/auth-team"
+        - "org/platform-team"
+      google_groups:
+        - "auth-engineers@example.com"
+        - "platform-engineers@example.com"
+      require_repo_access: "write"
+    environments:
+      staging:
+        branch: "main"
+        target:
+          file: "apps/staging/auth/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "direct"
+          commit_message: "chore(staging): promote auth-service to {{ .TargetVersion }}"
+      preprod:
+        branch: "main"
+        target:
+          file: "apps/preprod/auth/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "direct"
+          commit_message: "chore(preprod): promote auth-service to {{ .TargetVersion }}"
+      production:
+        branch: "main"
+        target:
+          file: "apps/production/auth/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "pull_request"
+          title: "Promote auth-service to {{ .TargetVersion }}"
+          body: "Promoted via DeployStackr by {{ .User }}"
+
+  notification-service:
+    display_name: "Notification Service"
+    icon: "notifications"
+    source:
+      type: "git_tags"
+      repository: "/Users/eliotstocker/VersionControl/deploystackr/.demo-gitops"
+      filter: "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    context:
+      repo: "/Users/eliotstocker/VersionControl/deploystackr/.demo-gitops"
+      changelog_strategy: "git_diff"
+    environments:
+      staging:
+        branch: "main"
+        target:
+          file: "apps/staging/notification/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "direct"
+      preprod:
+        branch: "main"
+        target:
+          file: "apps/preprod/notification/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "direct"
+      production:
+        branch: "main"
+        target:
+          file: "apps/production/notification/values.yaml"
+          path: "$.image.tag"
+        write_strategy:
+          mode: "pull_request"

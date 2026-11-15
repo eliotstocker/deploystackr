@@ -1,0 +1,13 @@
+{
+  "name": "deploystackr",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The lightweight GitOps promotion dashboard",
+  "scripts": {
+    "build:site": "stackr-site build site -o site",
+    "serve:site": "stackr-site serve site"
+  },
+  "devDependencies": {
+    "stackr-site": "github:eliotstocker/stackr-site"
+  }
+}

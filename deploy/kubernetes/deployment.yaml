@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deploystackr
+  namespace: deploystackr
+  labels:
+    app.kubernetes.io/name: deploystackr
+    app.kubernetes.io/component: gitops-dashboard
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: deploystackr
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: deploystackr
+    spec:
+      # Optional: target Raspberry Pi ARM64 nodes specifically
+      # nodeSelector:
+      #   kubernetes.io/arch: arm64
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        fsGroup: 10001
+
+      containers:
+        - name: deploystackr
+          image: eliotstocker/deploystackr:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: SCRATCH_DIR
+              value: "/data/scratch"
+            # Path to config file, or leave unset to bootstrap via GITOPS_REPO
+            - name: CONFIG_PATH
+              value: "/etc/deploystackr/config.yaml"
+            # Optional GitOps repository bootstrap if not using a mounted config file
+            - name: GITOPS_REPO
+              value: "git@github.com:eliotstocker/gitops-cluster.git"
+            - name: GITOPS_BRANCH
+              value: "main"
+            # Personal Access Token for GitHub HTTPS git access and PR creation
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: deploystackr-github-token
+                  key: token
+                  optional: true
+            # Explicit SSH key path (auto-discovered if mounted under /etc/deploystackr/ssh)
+            - name: SSH_KEY_PATH
+              value: "/etc/deploystackr/ssh/id_rsa"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            # Persistent scratch volume for bare clones and promotion checkouts
+            - name: scratch-volume
+              mountPath: /data/scratch
+            # SSH private key for Git repository authentication
+            - name: ssh-key-volume
+              mountPath: /etc/deploystackr/ssh
+              readOnly: true
+            # GPG signing key for signed GitOps promotion commits (optional)
+            - name: gpg-key-volume
+              mountPath: /etc/deploystackr/gpg
+              readOnly: true
+            # Docker/OCI registry auth for querying private container registries (optional)
+            - name: registry-auth-volume
+              mountPath: /etc/deploystackr/registry
+              readOnly: true
+            # ConfigMap volume (optional if in-repo .deploystackr.yaml is used)
+            - name: config-volume
+              mountPath: /etc/deploystackr/config.yaml
+              subPath: config.yaml
+              readOnly: true
+
+      volumes:
+        - name: scratch-volume
+          persistentVolumeClaim:
+            claimName: deploystackr-scratch-pvc
+        - name: ssh-key-volume
+          secret:
+            secretName: deploystackr-ssh-key
+            defaultMode: 0400
+            optional: true
+        - name: gpg-key-volume
+          secret:
+            secretName: deploystackr-gpg-key
+            defaultMode: 0400
+            optional: true
+        - name: registry-auth-volume
+          secret:
+            secretName: deploystackr-registry-auth
+            defaultMode: 0400
+            optional: true
+        - name: config-volume
+          configMap:
+            name: deploystackr-config
+            optional: true

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://deploystac.kr/sitemap.xml
+LLMs-Txt: https://deploystac.kr/llms.txt

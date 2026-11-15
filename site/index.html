@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>deploystackr — the lightweight GitOps promotion dashboard</title>
+  <meta name="description" content="ArgoCD is for Kubernetes. DeployStackr is for humans. The lightweight GitOps promotion dashboard that kills the 6-tab release ritual." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700&display=swap" />
+  <link rel="stylesheet" href="assets/style.css" />
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐬</text></svg>" />
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+  <link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM summary" />
+  <link rel="help" type="text/plain" href="/llms.txt" title="Agent Overview (llms.txt)" />
+  <meta name="llms" content="/llms.txt" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "deploystackr",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "All",
+  "description": "ArgoCD is for Kubernetes. DeployStackr is for humans. The lightweight GitOps promotion dashboard that kills the 6-tab release ritual.",
+  "url": "https://deploystac.kr",
+  "documentation": "https://deploystac.kr/llms.txt"
+}
+  </script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="wordmark">deploystackr</a>
+    <nav>
+      <a href="#philosophy">Philosophy</a>
+      <a href="#preview">Preview</a>
+      <a href="#features">Features</a>
+      <a href="https://github.com/eliotstocker/deploystackr" class="nav-btn">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+<pre class="ascii-logo" aria-hidden="true">___  ____ ___  _    ____ _   _ ____ ___ ____ ____ _  _ ____
+|  \ |___ |__] |    |  |  \_/  [__   |  |__| |    |_/  |__/
+|__/ |___ |    |___ |__|   |   ___]  |  |  | |___ | \_ |  \</pre>
+<h1>ArgoCD is for Kubernetes. DeployStackr is for Humans.</h1>
+<p><strong>The lightweight GitOps promotion dashboard that kills the 6-tab release ritual.</strong></p>
+<p>Safely bump image tags in Git with 1 click, preview exact commit diffs, and inspect audit tenure with zero database overhead.</p>
+<div class="cta-row">
+<code class="install" role="button" tabindex="0" onclick="copyInstallPill(this, 'curl -fsSL https://deploystac.kr/install.sh | bash')" title="Click to copy">curl -fsSL https://deploystac.kr/install.sh | bash</code>
+<a class="btn btn-primary" href="https://github.com/eliotstocker/deploystackr">View on GitHub</a>
+</div>
+</section>
+
+<section id="philosophy">
+<h2>Core Philosophy</h2>
+<p>Three strict principles that keep promotions predictable, lightweight, and auditable.</p>
+<div class="flow-grid">
+<div class="flow-step">
+  <div class="step-num">01</div>
+  <div class="step-content">
+    <h3>Do One Thing Well</h3>
+    <p>DeployStackr's sole job is to safely edit a file in Git to bump a version or image tag (via direct commit or Pull Request). It does not manage clusters or orchestrate rollouts—that execution belongs strictly to GitOps engines (<strong>ArgoCD</strong>, <strong>Flux</strong>) or CI/CD pipelines (<strong>GitHub Actions</strong>).</p>
+  </div>
+</div>
+<div class="flow-step">
+  <div class="step-num">02</div>
+  <div class="step-content">
+    <h3>Index Upstream, Don't Host</h3>
+    <p>DeployStackr queries known upstream sources (OCI registries, GitHub Releases, or Git tags) to present candidate deployable versions. It is not an artifact registry and stores no binaries or image blobs—it simply answers: <em>"What versions are available to deploy?"</em></p>
+  </div>
+</div>
+<div class="flow-step">
+  <div class="step-num">03</div>
+  <div class="step-content">
+    <h3>Git History as Audit Log</h3>
+    <p>Zero external database required. Your Git repository is the single source of truth. By parsing commit metadata, author signatures, and PR merge history directly from your Git tree, DeployStackr tracks exactly who deployed what, when, and how long it ran without data drift.</p>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="preview">
+<h2>The Control Switch For GitOps</h2>
+<p>Clean environment status, instant diffs, and zero YAML gymnastics.</p>
+<div class="mock-stage">
+  <div class="mock-titlebar">
+    <div class="mock-dots">
+      <span class="mock-dot red"></span>
+      <span class="mock-dot yellow"></span>
+      <span class="mock-dot green"></span>
+    </div>
+    <span class="mock-title">deploystackr — service catalog</span>
+    <span></span>
+  </div>
+
+  <div class="mock-content">
+    <table class="mock-table">
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Upstream Source</th>
+          <th>Staging</th>
+          <th>Production</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>billing-service</strong></td>
+          <td><span class="badge-tag">ghcr.io/org/billing</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="status-dot-live" title="Active"></span>
+              <code>v2.4.0</code>
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="status-ring-pending" title="PR #142 Pending"></span>
+              <code>v2.3.9</code>
+              <span class="badge-tag" style="color:var(--accent-amber);background:rgba(251,191,36,0.1);">PR #142</span>
+            </div>
+          </td>
+          <td><a href="#preview" class="btn" style="padding:6px 12px;font-size:0.8rem;">Promote</a></td>
+        </tr>
+        <tr>
+          <td><strong>auth-service</strong></td>
+          <td><span class="badge-tag">github_releases</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="status-dot-live" title="Active"></span>
+              <code>v1.8.2</code>
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="status-dot-live" title="Active"></span>
+              <code>v1.8.2</code>
+            </div>
+          </td>
+          <td><a href="#preview" class="btn" style="padding:6px 12px;font-size:0.8rem;">Promote</a></td>
+        </tr>
+        <tr>
+          <td><strong>notification-service</strong></td>
+          <td><span class="badge-tag">git_tags</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="status-dot-live" title="Active"></span>
+              <code>v3.1.0</code>
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="status-dot-live" title="Active"></span>
+              <code>v3.0.4</code>
+            </div>
+          </td>
+          <td><a href="#preview" class="btn" style="padding:6px 12px;font-size:0.8rem;">Promote</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<section id="features">
+<h2>Engineered For Humans & GitOps</h2>
+<p>Everything you need to ship safely without touching raw manifest YAML.</p>
+<div class="features">
+<div class="feature">
+<h3>AST-Preserving Mutator</h3>
+<p>Modifies target image tags in Helm <code>values.yaml</code> or JSON manifests without wiping comments, indentation, or key ordering.</p>
+</div>
+<div class="feature">
+<h3>Instant Commit & File Diffs</h3>
+<p>Click any release to immediately inspect the exact Git commits and line-by-line diff between what is running live and what you are about to ship.</p>
+</div>
+<div class="feature">
+<h3>The Deployment Dots</h3>
+<p>Colored dots indicate live environments, pulsing rings show pending PRs awaiting review, and grey dots let you inspect previous release lifespans.</p>
+</div>
+<div class="feature">
+<h3>1-Click Instant Rollbacks</h3>
+<p>Need to revert staging or production in an emergency? Open the rollback history, review the last five deployments, and restore with one click.</p>
+</div>
+<div class="feature">
+<h3>Single Self-Contained Binary</h3>
+<p>Compiled in Go with an embedded Svelte 5 frontend. Zero external database, zero Redis cache, zero runtime dependencies.</p>
+</div>
+<div class="feature">
+<h3>In-Repo GitOps Config</h3>
+<p>Place a <code>.deploystackr.yaml</code> in your GitOps repo root. DeployStackr auto-discovers services and reloads automatically on git push.</p>
+</div>
+</div>
+</section>
+</main>
+
+<footer>
+  <p>MIT licensed · <a href="llms.txt">llms.txt</a> · <a href="https://github.com/eliotstocker/deploystackr">github.com/eliotstocker/deploystackr</a> · <button type="button" class="footer-apps-btn" popovertarget="stackr-apps-popover">Other Apps ▴</button></p>
+  <div id="stackr-apps-popover" popover="auto" class="stackr-apps-popover">
+    <div class="stackr-apps-header">*stac.kr suite</div>
+    <div class="stackr-apps-list">
+      <a href="https://vibestac.kr" class="stackr-app-item" target="_blank" rel="noopener">
+        <span class="stackr-app-dot" style="background: linear-gradient(90deg, #ff6ec7, #ffa500)"></span>
+        <span class="stackr-app-info">
+          <span class="stackr-app-name">vibestac.kr</span>
+          <span class="stackr-app-desc">One-command local dev stack & MCP server</span>
+        </span>
+      </a>
+      <a href="https://metastac.kr" class="stackr-app-item" target="_blank" rel="noopener">
+        <span class="stackr-app-dot" style="background: linear-gradient(90deg, #00FF88, #FACC15)"></span>
+        <span class="stackr-app-info">
+          <span class="stackr-app-name">metastac.kr</span>
+          <span class="stackr-app-desc">Stacked PRs & multi-repo git orchestration</span>
+        </span>
+      </a>
+      <a href="https://vibebac.kr" class="stackr-app-item" target="_blank" rel="noopener">
+        <span class="stackr-app-dot" style="background: linear-gradient(90deg, #6366f1, #06b6d4)"></span>
+        <span class="stackr-app-info">
+          <span class="stackr-app-name">vibebac.kr</span>
+          <span class="stackr-app-desc">Instant zero-config backend for AI agents</span>
+        </span>
+      </a>
+      <a href="https://deploystac.kr" class="stackr-app-item" target="_blank" rel="noopener">
+        <span class="stackr-app-dot" style="background: linear-gradient(90deg, #a855f7, #f43f5e)"></span>
+        <span class="stackr-app-info">
+          <span class="stackr-app-name">deploystac.kr</span>
+          <span class="stackr-app-desc">Lightweight GitOps promotion dashboard</span>
+        </span>
+      </a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function copyInstallPill(el, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      if (!el.dataset.orig) el.dataset.orig = el.innerText;
+      el.classList.add('copied');
+      el.innerText = 'Copied to clipboard';
+      setTimeout(() => {
+        el.innerText = el.dataset.orig;
+        el.classList.remove('copied');
+      }, 1400);
+    });
+  }
+  function copyPromptBox(btn) {
+    const box = btn.closest('.agent-prompt-box');
+    const pre = box ? box.querySelector('.agent-prompt-content') : null;
+    if (!pre) return;
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      const orig = btn.innerText;
+      btn.innerText = 'Copied';
+      setTimeout(() => btn.innerText = orig, 1600);
+    });
+  }
+
+  // Analogue ASCII Logo Glitch Engine (localized horizontal shear & char static)
+  (function initAsciiGlitch() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const logo = document.querySelector('.ascii-logo');
+    if (!logo) return;
+
+    const rawLines = logo.textContent.split('\n');
+    const maxLen = Math.max(...rawLines.map((l) => l.length));
+    const baseLines = rawLines.map((l) => l.padEnd(maxLen, ' '));
+    const baseText = baseLines.join('\n');
+    logo.textContent = baseText;
+
+    const GLITCH_CHARS = '_|/\\[]=-~:;+*#░▒▓';
+
+    function renderCorruptedFrame(intensity = 1) {
+      // Pick 1 or 2 localized horizontal windows (8 to 18 columns wide)
+      const nextLines = baseLines.map((line) => line.split(''));
+      const numPatches = Math.random() < 0.45 ? 2 : 1;
+
+      for (let p = 0; p < numPatches; p++) {
+        const sliceWidth = 8 + Math.floor(Math.random() * 12 * intensity);
+        const sliceStart = Math.floor(Math.random() * Math.max(1, maxLen - sliceWidth));
+        const sliceEnd = Math.min(maxLen, sliceStart + sliceWidth);
+        const shearRow = Math.floor(Math.random() * baseLines.length);
+        const shearShift = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 2));
+
+        baseLines.forEach((line, r) => {
+          // Analogue horizontal scanline shear on the chosen row within/around the slice
+          if (r === shearRow) {
+            for (let c = Math.max(0, sliceStart - 2); c < Math.min(maxLen, sliceEnd + 2); c++) {
+              const srcCol = c - shearShift;
+              nextLines[r][c] = (srcCol >= 0 && srcCol < maxLen) ? line[srcCol] : ' ';
+            }
+          }
+
+          // Localized character static corruption inside the slice
+          for (let c = sliceStart; c < sliceEnd; c++) {
+            const orig = nextLines[r][c];
+            const isInk = orig !== ' ';
+            const prob = isInk ? 0.55 * intensity : 0.14 * intensity;
+            if (Math.random() < prob) {
+              nextLines[r][c] = (isInk && Math.random() < 0.22)
+                ? ' '
+                : GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
+            }
+          }
+        });
+      }
+
+      logo.textContent = nextLines.map((chars) => chars.join('')).join('\n');
+    }
+
+    function triggerBurst(intensity = 1) {
+      const frames = 3 + Math.floor(Math.random() * 4);
+      let step = 0;
+
+      function tick() {
+        if (step < frames) {
+          // Occasional brief clean frame mid-burst like an analogue sync recovery
+          if (step > 0 && Math.random() < 0.2) {
+            logo.textContent = baseText;
+          } else {
+            renderCorruptedFrame(intensity);
+          }
+          step++;
+          setTimeout(tick, 45 + Math.random() * 45);
+        } else {
+          logo.textContent = baseText;
+        }
+      }
+      tick();
+    }
+
+    function scheduleLoop() {
+      const delay = 6500 + Math.random() * 7500;
+      setTimeout(() => {
+        triggerBurst(1);
+        if (Math.random() < 0.25) {
+          setTimeout(() => triggerBurst(0.7), 180 + Math.random() * 120);
+        }
+        scheduleLoop();
+      }, delay);
+    }
+
+    setTimeout(() => triggerBurst(0.85), 900);
+    scheduleLoop();
+    logo.addEventListener('mouseenter', () => triggerBurst(1.15));
+  })();
+</script>
+</body>
+</html>

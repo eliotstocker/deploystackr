@@ -1,0 +1,19 @@
+{
+  "name": "deploystackr",
+  "tagline": "the lightweight GitOps promotion dashboard",
+  "description": "ArgoCD is for Kubernetes. DeployStackr is for humans. The lightweight GitOps promotion dashboard that kills the 6-tab release ritual.",
+  "url": "https://deploystac.kr",
+  "github": "https://github.com/eliotstocker/deploystackr",
+  "favicon": "🐬",
+  "theme": {
+    "mode": "dark",
+    "gradientFrom": "#a855f7",
+    "gradientTo": "#f43f5e"
+  },
+  "nav": [
+    { "label": "Philosophy", "href": "#philosophy" },
+    { "label": "Preview", "href": "#preview" },
+    { "label": "Features", "href": "#features" },
+    { "label": "GitHub", "href": "https://github.com/eliotstocker/deploystackr", "primary": true }
+  ]
+}
