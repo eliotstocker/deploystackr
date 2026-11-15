@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/eliotstocker/deploystackr/compare/v1.3.0...v1.4.0) (2026-11-15)
+
+
+### Features
+
+* add clickable SVG status badges for services ([e3f0549](https://github.com/eliotstocker/deploystackr/commit/e3f05496f2ac3029b8a81b06f4d2c504febc82c5))
+
 # [1.3.0](https://github.com/eliotstocker/deploystackr/compare/v1.2.5...v1.3.0) (2026-11-15)
 
 
