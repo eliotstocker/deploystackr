@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/eliotstocker/deploystackr/compare/v1.2.0...v1.2.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **ui:** default version list to date published with sort toggle ([cbc8c9c](https://github.com/eliotstocker/deploystackr/commit/cbc8c9ca73d3b01f970c739058144c7463629656))
+
 # [1.2.0](https://github.com/eliotstocker/deploystackr/compare/v1.1.0...v1.2.0) (2026-11-15)
 
 
