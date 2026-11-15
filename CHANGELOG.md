@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/eliotstocker/deploystackr/compare/v1.2.4...v1.2.5) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** strip trailing tags from semver versions in summary views ([efe47b5](https://github.com/eliotstocker/deploystackr/commit/efe47b5f508b4300c5d6acca2536fc65aec29713))
+
 ## [1.2.4](https://github.com/eliotstocker/deploystackr/compare/v1.2.3...v1.2.4) (2026-11-15)
 
 
