@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/eliotstocker/deploystackr/compare/v1.2.3...v1.2.4) (2026-11-15)
+
+
+### Bug Fixes
+
+* populate upstream versions on index and avoid fake latest fallback ([bacdffa](https://github.com/eliotstocker/deploystackr/commit/bacdffaf2ca6810eadf1da5ce80be04babcda0c3))
+
 ## [1.2.3](https://github.com/eliotstocker/deploystackr/compare/v1.2.2...v1.2.3) (2026-11-15)
 
 
