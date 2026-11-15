@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/eliotstocker/deploystackr/compare/v1.4.1...v1.4.2) (2026-11-15)
+
+
+### Bug Fixes
+
+* **web:** render embed deploy confirmation as a non-reflowing overlay ([b2f07bd](https://github.com/eliotstocker/deploystackr/commit/b2f07bdaba9bf5a8b70b441948068359ef959a56))
+
 ## [1.4.1](https://github.com/eliotstocker/deploystackr/compare/v1.4.0...v1.4.1) (2026-11-15)
 
 
