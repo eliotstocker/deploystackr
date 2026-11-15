@@ -37,6 +37,7 @@
       <a href="#philosophy">Philosophy</a>
       <a href="#preview">Preview</a>
       <a href="#features">Features</a>
+      <a href="#mcp">MCP</a>
       <a href="https://github.com/eliotstocker/deploystackr" class="nav-btn">GitHub</a>
     </nav>
   </div>
@@ -169,7 +170,7 @@
 </section>
 
 <section id="features">
-<h2>Engineered For Humans & GitOps</h2>
+<h2>Engineered For Humans, Agents & GitOps</h2>
 <p>Everything you need to ship safely without touching raw manifest YAML.</p>
 <div class="features">
 <div class="feature">
@@ -196,7 +197,34 @@
 <h3>In-Repo GitOps Config</h3>
 <p>Place a <code>.deploystackr.yaml</code> in your GitOps repo root. DeployStackr auto-discovers services and reloads automatically on git push.</p>
 </div>
+<div class="feature">
+<h3>Built-in MCP Server</h3>
+<p>Connect AI coding agents directly via Streamable HTTP (<code>/mcp</code>) to inspect active versions, promotion queues, commit diffs, audit history, and trigger promotions with full GitHub RBAC.</p>
 </div>
+</div>
+</section>
+
+<section id="mcp">
+<h2>Built-in MCP Server</h2>
+<p>Let AI agents inspect GitOps promotion state and trigger version promotions directly from your IDE or CLI using Streamable HTTP at <code>/mcp</code> (or <code>/api/mcp</code>). Authenticate requests with a GitHub token (<code>Authorization: Bearer &lt;GITHUB_TOKEN&gt;</code> or <code>X-GitHub-Token</code>) so DeployStackr enforces your repository RBAC and attributes every commit and PR to you.</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;deploystackr&quot;: {
+      &quot;url&quot;: &quot;https://your-deploystackr-host/mcp&quot;,
+      &quot;headers&quot;: {
+        &quot;Authorization&quot;: &quot;Bearer YOUR_GITHUB_TOKEN&quot;
+      }
+    }
+  }
+}</code></pre>
+<ul>
+<li><strong><code>list_services</code></strong>: Discover configured services, context repositories, environments, and promotion permissions.</li>
+<li><strong><code>get_deployed</code></strong>: Inspect active GitOps-declared versions, pending promotion PRs, and live cluster rollout status by <code>service</code> or <code>context_repo</code>.</li>
+<li><strong><code>get_deploy_queue</code></strong>: View open promotion PRs, in-flight rollouts, and unpromoted upstream candidate versions.</li>
+<li><strong><code>get_version_diff</code></strong>: Preview Git commit logs and diff stats between any two versions or an environment's active version.</li>
+<li><strong><code>get_history</code></strong>: Page through Git-derived promotion audit history with <code>limit</code>, <code>offset</code>, and <code>since</code>/<code>until</code> filters.</li>
+<li><strong><code>promote</code></strong>: Trigger a GitOps version promotion (direct commit or Pull Request) for a specific tag or <code>&quot;latest&quot;</code>.</li>
+</ul>
 </section>
 </main>
 

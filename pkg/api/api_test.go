@@ -626,6 +626,70 @@ func TestComputeTopEnvStatus_RepoPrefixMatching(t *testing.T) {
 	}
 }
 
+func TestMCPEndpointOnAPIServer(t *testing.T) {
+	mockFS := fstest.MapFS{
+		"index.html": &fstest.MapFile{
+			Data: []byte("<!doctype html><html><body>DeployStackr Portal</body></html>"),
+		},
+	}
+
+	cfg := &config.Config{
+		Version: "1",
+		Services: map[string]*config.ServiceConfig{
+			"billing-service": {
+				Context: config.ContextConfig{Repo: "org/billing-service"},
+				Environments: map[string]*config.EnvironmentConfig{
+					"staging": {Branch: "main"},
+				},
+			},
+		},
+	}
+	memStore := store.NewMemoryStore()
+	memStore.SetEvents("billing-service", "staging", []store.DeploymentEvent{
+		{Service: "billing-service", Environment: "staging", Version: "v1.4.0", IsActive: true},
+	})
+	scratchDir := t.TempDir()
+	idx, _ := indexer.NewIndexer(cfg, memStore, scratchDir)
+	dep := deployer.NewManager(cfg, memStore, idx, scratchDir)
+	srv := NewServer(cfg, memStore, idx, dep, mockFS)
+
+	// 1. CORS preflight OPTIONS /mcp
+	optReq := httptest.NewRequest(http.MethodOptions, "/mcp", nil)
+	optRec := httptest.NewRecorder()
+	srv.ServeHTTP(optRec, optReq)
+	if optRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on OPTIONS /mcp, got %d", optRec.Code)
+	}
+	if !strings.Contains(optRec.Header().Get("Access-Control-Allow-Headers"), "MCP-Protocol-Version") {
+		t.Errorf("expected MCP headers in Access-Control-Allow-Headers, got %s", optRec.Header().Get("Access-Control-Allow-Headers"))
+	}
+
+	// 2. /mcp and /api/mcp both respond to initialize and tools/call
+	for _, endpoint := range []string{"/mcp", "/api/mcp"} {
+		initReq := httptest.NewRequest(http.MethodPost, endpoint, strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}`))
+		initRec := httptest.NewRecorder()
+		srv.ServeHTTP(initRec, initReq)
+		if initRec.Code != http.StatusOK || !strings.Contains(initRec.Body.String(), "deploystackr") {
+			t.Fatalf("%s initialize failed: %d %s", endpoint, initRec.Code, initRec.Body.String())
+		}
+
+		callReq := httptest.NewRequest(http.MethodPost, endpoint, strings.NewReader(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_deployed","arguments":{"context_repo":"org/billing-service"}}}`))
+		callRec := httptest.NewRecorder()
+		srv.ServeHTTP(callRec, callReq)
+		if callRec.Code != http.StatusOK || !strings.Contains(callRec.Body.String(), "v1.4.0") {
+			t.Fatalf("%s get_deployed failed: %d %s", endpoint, callRec.Code, callRec.Body.String())
+		}
+	}
+
+	// 3. SPA fallback does not swallow /mcp/* subpaths
+	notFoundReq := httptest.NewRequest(http.MethodGet, "/mcp/unknown", nil)
+	notFoundRec := httptest.NewRecorder()
+	srv.ServeHTTP(notFoundRec, notFoundReq)
+	if notFoundRec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 on /mcp/unknown, got %d", notFoundRec.Code)
+	}
+}
+
 
 
 

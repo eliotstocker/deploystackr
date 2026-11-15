@@ -30,7 +30,7 @@ Clean environment status, instant diffs, and zero YAML gymnastics.
 
 {{include:snippets/preview.html}}
 
-## Engineered For Humans & GitOps {#features}
+## Engineered For Humans, Agents & GitOps {#features}
 
 Everything you need to ship safely without touching raw manifest YAML.
 
@@ -52,4 +52,31 @@ Compiled in Go with an embedded Svelte 5 frontend. Zero external database, zero 
 
 ### In-Repo GitOps Config
 Place a `.deploystackr.yaml` in your GitOps repo root. DeployStackr auto-discovers services and reloads automatically on git push.
+
+### Built-in MCP Server
+Connect AI coding agents directly via Streamable HTTP (`/mcp`) to inspect active versions, promotion queues, commit diffs, audit history, and trigger promotions with full GitHub RBAC.
 :::
+
+## Built-in MCP Server {#mcp}
+
+Let AI agents inspect GitOps promotion state and trigger version promotions directly from your IDE or CLI using Streamable HTTP at `/mcp` (or `/api/mcp`). Authenticate requests with a GitHub token (`Authorization: Bearer <GITHUB_TOKEN>` or `X-GitHub-Token`) so DeployStackr enforces your repository RBAC and attributes every commit and PR to you.
+
+```json
+{
+  "mcpServers": {
+    "deploystackr": {
+      "url": "https://your-deploystackr-host/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_GITHUB_TOKEN"
+      }
+    }
+  }
+}
+```
+
+- **`list_services`**: Discover configured services, context repositories, environments, and promotion permissions.
+- **`get_deployed`**: Inspect active GitOps-declared versions, pending promotion PRs, and live cluster rollout status by `service` or `context_repo`.
+- **`get_deploy_queue`**: View open promotion PRs, in-flight rollouts, and unpromoted upstream candidate versions.
+- **`get_version_diff`**: Preview Git commit logs and diff stats between any two versions or an environment's active version.
+- **`get_history`**: Page through Git-derived promotion audit history with `limit`, `offset`, and `since`/`until` filters.
+- **`promote`**: Trigger a GitOps version promotion (direct commit or Pull Request) for a specific tag or `"latest"`.
