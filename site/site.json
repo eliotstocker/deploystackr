@@ -14,6 +14,7 @@
     { "label": "Philosophy", "href": "#philosophy" },
     { "label": "Preview", "href": "#preview" },
     { "label": "Features", "href": "#features" },
+    { "label": "MCP", "href": "#mcp" },
     { "label": "GitHub", "href": "https://github.com/eliotstocker/deploystackr", "primary": true }
   ]
 }

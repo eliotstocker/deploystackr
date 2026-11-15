@@ -22,6 +22,7 @@ import (
 	"deploystackr/pkg/deployer"
 	"deploystackr/pkg/git"
 	"deploystackr/pkg/indexer"
+	"deploystackr/pkg/mcp"
 	"deploystackr/pkg/provider"
 	"deploystackr/pkg/store"
 	"deploystackr/pkg/webhook"
@@ -37,6 +38,7 @@ type Server struct {
 	clusterChecker *cluster.Checker
 	distFS         fs.FS
 	authMgr        *auth.AuthManager
+	mcpServer      *mcp.Server
 	mux            *http.ServeMux
 
 	releasePRsMu         sync.Mutex
@@ -60,6 +62,15 @@ func NewServer(cfg *config.Config, s *store.MemoryStore, idx *indexer.Indexer, d
 		releasePRsCache:      make(map[string]map[string][]int),
 		contextVersionsCache: make(map[string][]provider.VersionInfo),
 	}
+	srv.mcpServer = mcp.NewServer(mcp.Deps{
+		Config:         cfg,
+		Store:          s,
+		Indexer:        idx,
+		Deployer:       dep,
+		Dispatcher:     srv.dispatcher,
+		Auth:           srv.authMgr,
+		ClusterChecker: func() *cluster.Checker { return srv.clusterChecker },
+	})
 	srv.routes()
 	return srv
 }
@@ -74,7 +85,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Forwarded-User, Accept")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-GitHub-Token, X-Forwarded-User, Accept, Mcp-Session-Id, MCP-Protocol-Version")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -101,12 +112,14 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/webhooks/pr", s.handleWebhookPR)
 	s.mux.HandleFunc("/api/webhooks", s.handleWebhooksList)
 	s.mux.HandleFunc("/api/webhook", s.handleWebhook)
+	s.mux.Handle("/mcp", s.mcpServer)
+	s.mux.Handle("/api/mcp", s.mcpServer)
 
 	// Frontend SPA static server
 	if s.distFS != nil {
 		fileServer := http.FileServer(http.FS(s.distFS))
 		s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/api/") {
+			if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/mcp" || strings.HasPrefix(r.URL.Path, "/mcp/") {
 				http.NotFound(w, r)
 				return
 			}
@@ -611,7 +624,7 @@ func areVersionsEqual(v1, v2 string) bool {
 }
 
 func computeTopEnvStatus(svcName string, svcCfg *config.ServiceConfig, envViews map[string]store.EnvironmentView, envPriority []string, memStore *store.MemoryStore) *TopEnvStatus {
-	if(len(envViews) < 1) {
+	if len(envViews) < 1 {
 		return nil
 	}
 
@@ -1019,21 +1032,21 @@ func (s *Server) resolveClusterStatus(ctx context.Context, svcName, envName, exp
 }
 
 func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request, serviceName string, svcCfg *config.ServiceConfig) {
-	if(r.Method != http.MethodGet) {
+	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	prov := provider.NewProvider(svcCfg.Source)
 	versions, err := prov.GetVersions(r.Context())
-	if(err != nil) {
+	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
-	if(versions == nil) {
+	if versions == nil {
 		versions = []provider.VersionInfo{}
-	} else if(len(versions) > 0) {
+	} else if len(versions) > 0 {
 		s.enrichVersionsFromContext(r.Context(), versions, svcCfg)
 		verStrs := make([]string, 0, len(versions))
 		for _, v := range versions {
@@ -1045,7 +1058,7 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request, serviceN
 }
 
 func (s *Server) enrichVersionsFromContext(ctx context.Context, versions []provider.VersionInfo, svcCfg *config.ServiceConfig) {
-	if(svcCfg == nil || strings.TrimSpace(svcCfg.Context.Repo) == "") {
+	if svcCfg == nil || strings.TrimSpace(svcCfg.Context.Repo) == "" {
 		return
 	}
 
@@ -1056,16 +1069,16 @@ func (s *Server) enrichVersionsFromContext(ctx context.Context, versions []provi
 	ctxVersions, found := s.contextVersionsCache[contextRepo]
 	s.contextVersionsMu.Unlock()
 
-	if(!found) {
+	if !found {
 		//query releases from github if context is a github repository
-		if(!strings.Contains(contextRepo, "gitlab")) {
+		if !strings.Contains(contextRepo, "gitlab") {
 			ctxProv := provider.NewProvider(config.SourceConfig{
 				Type:       "github_releases",
 				Repository: contextRepo,
 				TrimPrefix: tagPrefix,
 			})
 			fetched, err := ctxProv.GetVersions(ctx)
-			if(err == nil && len(fetched) > 0) {
+			if err == nil && len(fetched) > 0 {
 				ctxVersions = fetched
 				s.contextVersionsMu.Lock()
 				s.contextVersionsCache[contextRepo] = ctxVersions
@@ -1074,12 +1087,12 @@ func (s *Server) enrichVersionsFromContext(ctx context.Context, versions []provi
 		}
 	}
 
-	if(len(ctxVersions) > 0) {
+	if len(ctxVersions) > 0 {
 		relMap := make(map[string]provider.VersionInfo, len(ctxVersions)*2)
 		for _, cv := range ctxVersions {
 			relMap[cv.Version] = cv
 			relMap[strings.TrimPrefix(cv.Version, "v")] = cv
-			if(tagPrefix != "") {
+			if tagPrefix != "" {
 				relMap[strings.TrimPrefix(cv.Version, tagPrefix)] = cv
 			}
 		}
@@ -1088,20 +1101,20 @@ func (s *Server) enrichVersionsFromContext(ctx context.Context, versions []provi
 			v := &versions[i]
 			cleanV := strings.TrimPrefix(v.Version, "v")
 			match, ok := relMap[v.Version]
-			if(!ok) {
+			if !ok {
 				match, ok = relMap[cleanV]
 			}
-			if(!ok && tagPrefix != "") {
+			if !ok && tagPrefix != "" {
 				match, ok = relMap[tagPrefix+v.Version]
 			}
-			if(ok) {
-				if(v.Description == "") {
+			if ok {
+				if v.Description == "" {
 					v.Description = match.Description
 				}
-				if(v.Changelog == "") {
+				if v.Changelog == "" {
 					v.Changelog = match.Changelog
 				}
-				if(v.ReleasedAt == nil) {
+				if v.ReleasedAt == nil {
 					v.ReleasedAt = match.ReleasedAt
 				}
 				v.Prerelease = v.Prerelease || match.Prerelease
@@ -1111,7 +1124,7 @@ func (s *Server) enrichVersionsFromContext(ctx context.Context, versions []provi
 }
 
 func (s *Server) handleReleasePRs(w http.ResponseWriter, r *http.Request, serviceName string, svcCfg *config.ServiceConfig) {
-	if(r.Method != http.MethodGet) {
+	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -1126,11 +1139,11 @@ func (s *Server) handleReleasePRs(w http.ResponseWriter, r *http.Request, servic
 
 	prov := provider.NewProvider(svcCfg.Source)
 	versions, err := prov.GetVersions(r.Context())
-	if(err != nil) {
+	if err != nil {
 		writeJSON(w, http.StatusOK, map[string][]int{})
 		return
 	}
-	if(len(versions) > 0) {
+	if len(versions) > 0 {
 		s.enrichVersionsFromContext(r.Context(), versions, svcCfg)
 	}
 

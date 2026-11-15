@@ -200,7 +200,7 @@ func (p *OCIProvider) GetVersions(ctx context.Context) ([]VersionInfo, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	_, _, authHeader, hasAuth := config.GetRegistryAuth(host)
-	if(hasAuth && authHeader != "") {
+	if hasAuth && authHeader != "" {
 		req.Header.Set("Authorization", authHeader)
 	}
 
@@ -383,6 +383,11 @@ func sortVersions(versions []VersionInfo) {
 	sort.Slice(versions, func(i, j int) bool {
 		return compareVersions(versions[i].Version, versions[j].Version) > 0
 	})
+}
+
+// CompareVersions compares two version strings (returns 1 if a > b, -1 if a < b, 0 if equal).
+func CompareVersions(a, b string) int {
+	return compareVersions(a, b)
 }
 
 func compareVersions(a, b string) int {

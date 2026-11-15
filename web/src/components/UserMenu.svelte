@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import type { AuthUser, ServiceResponse } from "../types";
   import { logoutUser, loginDev } from "../lib/api";
+  import McpSetupModal from "./McpSetupModal.svelte";
 
   type Props = {
     user: AuthUser;
@@ -96,6 +97,7 @@
   );
 
   let menuOpen = $state(false);
+  let mcpModalOpen = $state(false);
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
 
   function getInitials(name?: string, username?: string): string {
@@ -299,6 +301,29 @@
       {/if}
 
       <div class="popover-footer">
+        <button
+          class="mcp-open-btn"
+          onclick={() => {
+            menuOpen = false;
+            mcpModalOpen = true;
+          }}
+          type="button"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <span>MCP Server &amp; Auth</span>
+        </button>
         <button class="logout-btn" onclick={handleSignOut} type="button">
           <svg
             width="14"
@@ -320,6 +345,10 @@
     </div>
   {/if}
 </div>
+
+{#if mcpModalOpen}
+  <McpSetupModal provider={user.provider} onClose={() => (mcpModalOpen = false)} />
+{/if}
 
 <style>
   .user-menu-container {
@@ -616,10 +645,40 @@
   .popover-footer {
     padding-top: 0.6rem;
     border-top: 1px solid rgba(100, 116, 139, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
   }
 
   :global(html.dark) .popover-footer {
     border-top-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .mcp-open-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.45rem;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    background: rgba(59, 130, 246, 0.08);
+    color: #2563eb;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+
+  :global(html.dark) .mcp-open-btn {
+    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.14);
+  }
+
+  .mcp-open-btn:hover {
+    background: rgba(59, 130, 246, 0.16);
+    border-color: rgba(59, 130, 246, 0.45);
   }
 
   .logout-btn {

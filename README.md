@@ -336,6 +336,18 @@ Subscribe to events globally or per-service:
 * `POST /api/promote`: Trigger a deployment (`{ service, environment, target_version, mode }`).
 * `GET /api/webhooks`: View configured webhooks and recent delivery history.
 
+### MCP Server (AI Agent Integration)
+DeployStackr embeds a built-in Model Context Protocol (MCP) server so AI coding agents can inspect GitOps promotion state and trigger version promotions directly:
+* **Streamable HTTP Transport**: `POST /mcp` (also mounted at `/api/mcp`) on the running server. Pass `Authorization: Bearer <GITHUB_TOKEN>` for RBAC evaluation and Git author attribution on promotions.
+* **Service or Context Repo Selection**: Every tool accepts either `service` (slug or display name) or `context_repo` (`owner/repo`, HTTPS URL, or SSH `git@...` remote).
+* **Tools**:
+  * `list_services`: List configured services with their slug, display name, context repository, upstream source, environments, and promotion permissions.
+  * `get_deployed`: Inspect active GitOps-declared versions, promotion metadata, open promotion PRs, and optional live cluster rollout status.
+  * `get_deploy_queue`: Inspect the promotion queue — open promotion PRs awaiting merge, in-flight cluster rollouts, and unpromoted upstream candidate versions ahead of each environment.
+  * `get_version_diff`: Preview Git commit logs and diff stats between two versions or between an environment's active version and a target version.
+  * `get_history`: Inspect paginated Git-derived promotion audit history for a service with optional environment, `limit`/`offset`, and `since`/`until` filters.
+  * `promote`: Trigger a GitOps version promotion (direct commit or Pull Request) for a specific tag or `"latest"`, enforcing RBAC permissions and dispatching configured webhooks.
+
 ---
 
 ## 🧪 Testing
