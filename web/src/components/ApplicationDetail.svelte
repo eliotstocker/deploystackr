@@ -44,12 +44,65 @@
   }: Props = $props();
 
   const PAGE_SIZE = 25;
+  type VersionSortMode = 'published' | 'version';
+
+  function getSavedVersionSort(): VersionSortMode {
+    if(typeof window === 'undefined') {
+      return 'published';
+    }
+    try {
+      return localStorage.getItem('deploystackr_version_sort') === 'version' ? 'version' : 'published';
+    } catch(e) {
+      return 'published';
+    }
+  }
+
   let versions = $state<VersionInfo[]>([]);
+  let versionSort = $state<VersionSortMode>(getSavedVersionSort());
+  let sortedVersions = $derived.by(() => {
+    if(versionSort === 'version') {
+      return versions;
+    }
+    return [...versions].sort((a, b) => {
+      const ta = a.released_at ? Date.parse(a.released_at) : NaN;
+      const tb = b.released_at ? Date.parse(b.released_at) : NaN;
+      const hasA = !Number.isNaN(ta);
+      const hasB = !Number.isNaN(tb);
+      if(hasA && hasB) {
+        return tb - ta;
+      }
+      if(hasA) {
+        return -1;
+      }
+      if(hasB) {
+        return 1;
+      }
+      return 0;
+    });
+  });
   let visibleCount = $state<number>(PAGE_SIZE);
   let tableWrapperEl = $state<HTMLDivElement | null>(null);
   let isLoadingMore = $state<boolean>(false);
-  let visibleVersions = $derived(versions.slice(0, visibleCount));
-  let hasMore = $derived(visibleCount < versions.length);
+  let visibleVersions = $derived(sortedVersions.slice(0, visibleCount));
+  let hasMore = $derived(visibleCount < sortedVersions.length);
+
+  function setVersionSort(mode: VersionSortMode) {
+    if(versionSort === mode) {
+      return;
+    }
+    versionSort = mode;
+    visibleCount = PAGE_SIZE;
+    if(tableWrapperEl) {
+      tableWrapperEl.scrollTop = 0;
+    }
+    if(typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('deploystackr_version_sort', mode);
+      } catch(e) {
+        //fail silently on storage write restrictions
+      }
+    }
+  }
 
   function loadMore() {
     if(!hasMore || isLoadingMore) {
@@ -1348,6 +1401,58 @@
           <span class="count-pill">{versions.length} versions</span>
         </div>
         <div class="pane-header-controls">
+          <div class="sort-toggle-group" role="group" aria-label="Order versions by">
+            <button
+              type="button"
+              class="sort-toggle-btn"
+              class:is-active={versionSort === 'published'}
+              onclick={setVersionSort.bind(null, 'published')}
+              aria-pressed={versionSort === 'published'}
+              title="Order by date published (newest first)"
+            >
+              <svg
+                class="sort-toggle-icon"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>Published</span>
+            </button>
+            <button
+              type="button"
+              class="sort-toggle-btn"
+              class:is-active={versionSort === 'version'}
+              onclick={setVersionSort.bind(null, 'version')}
+              aria-pressed={versionSort === 'version'}
+              title="Order by version number (highest first)"
+            >
+              <svg
+                class="sort-toggle-icon"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+              </svg>
+              <span>Version</span>
+            </button>
+          </div>
           <button
             type="button"
             class="notes-toggle-pill"
@@ -2922,13 +3027,80 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 0.75rem;
   }
 
   .pane-header-controls {
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
+  }
+
+  .sort-toggle-group {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    border-radius: var(--radius-pill);
+    background: rgba(241, 245, 249, 0.6);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    gap: 2px;
+  }
+
+  :global(html.dark) .sort-toggle-group {
+    background: rgba(15, 23, 42, 0.4);
+    border-color: rgba(51, 65, 85, 0.6);
+  }
+
+  .sort-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.16rem 0.5rem;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  :global(html.dark) .sort-toggle-btn {
+    color: #94a3b8;
+  }
+
+  .sort-toggle-btn:hover {
+    color: var(--text-main);
+  }
+
+  :global(html.dark) .sort-toggle-btn:hover {
+    color: #f1f5f9;
+  }
+
+  .sort-toggle-btn.is-active {
+    background: #ffffff;
+    color: #2563eb;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  }
+
+  :global(html.dark) .sort-toggle-btn.is-active {
+    background: rgba(59, 130, 246, 0.22);
+    color: #93c5fd;
+    box-shadow: none;
+  }
+
+  .sort-toggle-icon {
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+
+  .sort-toggle-btn.is-active .sort-toggle-icon {
+    opacity: 1;
   }
 
   .notes-toggle-pill {
