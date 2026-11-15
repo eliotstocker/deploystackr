@@ -12,6 +12,7 @@
   import ChangelogModal from "./ChangelogModal.svelte";
   import DiffViewer from "./DiffViewer.svelte";
   import RollbackModal from "./RollbackModal.svelte";
+  import EmbedModal from "./EmbedModal.svelte";
   import ServiceIcon from "./ServiceIcon.svelte";
   import SourceIcon from "./SourceIcon.svelte";
   import UserAvatar from "./UserAvatar.svelte";
@@ -664,6 +665,7 @@
   let openDeployRowVersion = $state<string | null>(null);
   let openEnvKebab = $state<string | null>(null);
   let activeRollbackEnv = $state<string | null>(null);
+  let activeEmbedModal = $state<{ envName?: string } | null>(null);
 
   interface DeploymentDotInfo {
     environment: string;
@@ -970,6 +972,30 @@
         <span class="custom-tooltip" role="tooltip">Sync Git</span>
       </div>
 
+      <div class="sync-git-tooltip-wrap">
+        <button
+          class="sync-icon-btn"
+          onclick={() => (activeEmbedModal = {})}
+          type="button"
+          aria-label="Embed Widget"
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+        </button>
+        <span class="custom-tooltip" role="tooltip">Embed Widget</span>
+      </div>
+
       <div class="deploy-dropdown-wrapper">
         <div class="deploy-tooltip-wrap">
           <button
@@ -1165,6 +1191,30 @@
                         <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                       </svg>
                       <span>Rollback</span>
+                    </button>
+                    <button
+                      class="kebab-item"
+                      type="button"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        openEnvKebab = null;
+                        activeEmbedModal = { envName };
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                      </svg>
+                      <span>Embed Widget</span>
                     </button>
                   </div>
                 {/if}
@@ -2236,6 +2286,14 @@
         loadDetails(service.service);
         onSync();
       }}
+    />
+  {/if}
+
+  {#if activeEmbedModal}
+    <EmbedModal
+      serviceName={service.service}
+      envName={activeEmbedModal.envName}
+      onClose={() => (activeEmbedModal = null)}
     />
   {/if}
 </div>
