@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/eliotstocker/deploystackr/compare/v1.0.0...v1.1.0) (2026-11-15)
+
+
+### Features
+
+* **mcp:** add Streamable HTTP MCP server, web UI setup modal, and site docs ([f21e5f9](https://github.com/eliotstocker/deploystackr/commit/f21e5f98b6e235311c02a6e8e7849a0e313566d0))
+
 # 1.0.0 (2026-11-15)
 
 
