@@ -17,6 +17,7 @@ import (
 	"deploystackr/pkg/ast"
 	"deploystackr/pkg/config"
 	"deploystackr/pkg/git"
+	"deploystackr/pkg/provider"
 	"deploystackr/pkg/store"
 )
 
@@ -62,6 +63,23 @@ func (idx *Indexer) ReindexAll(ctx context.Context) error {
 
 	// Discover and reconcile open promotion PRs across repos
 	idx.discoverOpenPRs(ctx)
+
+	// Refresh upstream candidate versions concurrently so Release Health has latest_version
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 4)
+	for svcName, svcCfg := range idx.cfg.Services {
+		if svcCfg == nil || strings.TrimSpace(svcCfg.Source.Repository) == "" {
+			continue
+		}
+		wg.Add(1)
+		go func(name string, cfg *config.ServiceConfig) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			idx.refreshServiceVersions(ctx, name, cfg)
+		}(svcName, svcCfg)
+	}
+	wg.Wait()
 
 	return nil
 }
@@ -164,7 +182,34 @@ func (idx *Indexer) ReindexService(ctx context.Context, serviceName string) erro
 			log.Printf("[indexer] Warning: failed to index %s/%s: %v", serviceName, envName, err)
 		}
 	}
+	idx.refreshServiceVersions(ctx, serviceName, svcCfg)
 	return nil
+}
+
+func (idx *Indexer) refreshServiceVersions(ctx context.Context, serviceName string, svcCfg *config.ServiceConfig) {
+	if svcCfg == nil || strings.TrimSpace(svcCfg.Source.Repository) == "" {
+		return
+	}
+
+	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	prov := provider.NewProvider(svcCfg.Source)
+	versions, err := prov.GetVersions(reqCtx)
+	if err != nil {
+		log.Printf("[indexer] Warning: failed to fetch versions for %s: %v", serviceName, err)
+		return
+	}
+	if len(versions) == 0 {
+		return
+	}
+
+	versions = provider.DeduplicateVersionsByDigest(versions)
+	verStrs := make([]string, 0, len(versions))
+	for _, v := range versions {
+		verStrs = append(verStrs, v.Version)
+	}
+	idx.store.SetVersions(serviceName, verStrs)
 }
 
 // GetRepoPath returns the local path to the bare clone for a given repository URL.

@@ -58,13 +58,13 @@
     if (envs.length === 0) return null;
     const [envName, envView] = envs[0];
     const active = envView.active_version || 'unknown';
-    const latest = svc.latest_version || active;
-    const isUp = areVersionsEqual(active, latest);
+    const latest = svc.latest_version || '';
+    const isUp = latest ? areVersionsEqual(active, latest) : false;
     return {
       environment: envName,
       active_version: active,
       latest_version: latest,
-      versions_behind: isUp ? 0 : 1,
+      versions_behind: !latest || isUp ? 0 : 1,
       is_up_to_date: isUp,
       pending_pr: envView.pending_pr
     };

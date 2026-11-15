@@ -626,6 +626,32 @@ func TestComputeTopEnvStatus_RepoPrefixMatching(t *testing.T) {
 	}
 }
 
+func TestComputeTopEnvStatus_NoCachedVersionsDoesNotFalselyClaimUpToDate(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	envViews := map[string]store.EnvironmentView{
+		"production": {
+			ActiveVersion: "v1.4.0",
+		},
+		"staging": {
+			ActiveVersion: "v1.5.0",
+		},
+	}
+
+	status := computeTopEnvStatus("billing", &config.ServiceConfig{}, envViews, []string{"production", "staging"}, memStore)
+	if status == nil {
+		t.Fatalf("expected non-nil status")
+	}
+	if status.LatestVersion != "" {
+		t.Errorf("expected empty LatestVersion when upstream versions are not cached, got %q", status.LatestVersion)
+	}
+	if status.IsUpToDate {
+		t.Errorf("expected IsUpToDate to be false when upstream versions are not cached")
+	}
+	if status.VersionsBehind != 0 {
+		t.Errorf("expected VersionsBehind to be 0 when upstream versions are not cached, got %d", status.VersionsBehind)
+	}
+}
+
 func TestMCPEndpointOnAPIServer(t *testing.T) {
 	mockFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{

@@ -662,26 +662,19 @@ func computeTopEnvStatus(svcName string, svcCfg *config.ServiceConfig, envViews 
 		return nil
 	}
 
-	// 2. Determine latest version
+	// 2. Determine latest version from cached upstream candidates only;
+	// never fall back to deployed env versions, which would falsely mark services up to date.
 	cachedVersions := memStore.GetVersions(svcName)
 	latestVersion := ""
 	if len(cachedVersions) > 0 {
 		latestVersion = cachedVersions[0]
-	} else {
-		for _, v := range envViews {
-			if v.ActiveVersion != "" && v.ActiveVersion != "unknown" {
-				if latestVersion == "" || v.ActiveVersion > latestVersion {
-					latestVersion = v.ActiveVersion
-				}
-			}
-		}
 	}
 
 	versionsBehind := 0
 	isUpToDate := false
 
 	activeVer := topView.ActiveVersion
-	if activeVer != "" && activeVer != "unknown" {
+	if activeVer != "" && activeVer != "unknown" && latestVersion != "" {
 		if areVersionsEqual(activeVer, latestVersion) {
 			isUpToDate = true
 			versionsBehind = 0
@@ -697,19 +690,7 @@ func computeTopEnvStatus(svcName string, svcCfg *config.ServiceConfig, envViews 
 				versionsBehind = foundIdx
 				isUpToDate = (foundIdx == 0)
 			} else {
-				if areVersionsEqual(activeVer, latestVersion) {
-					isUpToDate = true
-					versionsBehind = 0
-				} else {
-					versionsBehind = len(cachedVersions)
-				}
-			}
-		} else if latestVersion != "" {
-			if areVersionsEqual(activeVer, latestVersion) {
-				isUpToDate = true
-				versionsBehind = 0
-			} else {
-				versionsBehind = 1
+				versionsBehind = len(cachedVersions)
 			}
 		}
 	}

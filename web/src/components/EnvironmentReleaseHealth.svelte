@@ -279,6 +279,8 @@
                         <span class="status-badge behind">
                           {status.versions_behind} {status.versions_behind === 1 ? 'version' : 'versions'} behind
                         </span>
+                      {:else if !status.latest_version}
+                        <span class="text-muted">—</span>
                       {:else}
                         <span class="status-badge neutral">Differing</span>
                       {/if}
@@ -363,6 +365,8 @@
                       <span class="status-badge behind">
                         {status.versions_behind} {status.versions_behind === 1 ? 'version' : 'versions'} behind
                       </span>
+                    {:else if !status.latest_version}
+                      <span class="text-muted">—</span>
                     {:else}
                       <span class="status-badge neutral">
                         Differing

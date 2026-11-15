@@ -1186,21 +1186,13 @@ func (s *Server) computeTopEnvSummary(svcName string, orderedEnvs []string, envV
 	latestVersion := ""
 	if len(cachedVersions) > 0 {
 		latestVersion = cachedVersions[0]
-	} else {
-		for _, v := range envViews {
-			if v.ActiveVersion != "" && v.ActiveVersion != "unknown" {
-				if latestVersion == "" || provider.CompareVersions(v.ActiveVersion, latestVersion) > 0 {
-					latestVersion = v.ActiveVersion
-				}
-			}
-		}
 	}
 
 	versionsBehind := 0
 	isUpToDate := false
 	activeVer := topView.ActiveVersion
 
-	if activeVer != "" && activeVer != "unknown" {
+	if activeVer != "" && activeVer != "unknown" && latestVersion != "" {
 		if AreVersionsEqual(activeVer, latestVersion) {
 			isUpToDate = true
 		} else if len(cachedVersions) > 0 {
@@ -1217,8 +1209,6 @@ func (s *Server) computeTopEnvSummary(svcName string, orderedEnvs []string, envV
 			} else {
 				versionsBehind = len(cachedVersions)
 			}
-		} else if latestVersion != "" {
-			versionsBehind = 1
 		}
 	}
 
