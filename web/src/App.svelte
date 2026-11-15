@@ -10,10 +10,46 @@
   import LoginView from './components/LoginView.svelte';
   import UserMenu from './components/UserMenu.svelte';
   import ServiceIcon from './components/ServiceIcon.svelte';
+  import EmbedWidget from './components/EmbedWidget.svelte';
   import { sortEnvironments } from './lib/envPriority';
 
   const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true';
   const BASE_URL = import.meta.env.BASE_URL || '/';
+
+  function parseEmbedRoute() {
+    if (typeof window === 'undefined') {
+      return { active: false, serviceSlug: '', envParam: '', themeParam: 'auto', titleParam: '', isAuthPopup: false };
+    }
+    let cleanPath = '';
+    let searchStr = window.location.search;
+    if (IS_DEMO) {
+      const rawHash = window.location.hash.replace(/^#\/?/, '');
+      const [hashPath, hashQuery] = rawHash.split('?');
+      cleanPath = hashPath || '';
+      if (hashQuery) searchStr = `?${hashQuery}`;
+    } else {
+      const path = window.location.pathname;
+      const trimmed = path.startsWith(BASE_URL) ? path.slice(BASE_URL.length) : path;
+      cleanPath = trimmed.replace(/^\/+|\/+$/g, '');
+    }
+
+    if (cleanPath !== 'embed' && !cleanPath.startsWith('embed/')) {
+      return { active: false, serviceSlug: '', envParam: '', themeParam: 'auto', titleParam: '', isAuthPopup: false };
+    }
+
+    const params = new URLSearchParams(searchStr);
+    const pathSlug = cleanPath.startsWith('embed/') ? decodeURIComponent(cleanPath.slice('embed/'.length)) : '';
+    return {
+      active: true,
+      serviceSlug: params.get('service') || pathSlug,
+      envParam: params.get('env') || '',
+      themeParam: params.get('theme') || 'auto',
+      titleParam: params.get('title') || '',
+      isAuthPopup: params.get('auth_popup') === '1'
+    };
+  }
+
+  const embedRoute = parseEmbedRoute();
 
   function getSlugFromPath(): string {
     if (typeof window !== 'undefined') {
@@ -352,6 +388,8 @@
   });
 
   onMount(() => {
+    if (embedRoute.active) return;
+
     handleResize();
     window.addEventListener('resize', handleResize);
 
@@ -434,6 +472,15 @@
   }
 </script>
 
+{#if embedRoute.active}
+  <EmbedWidget
+    serviceSlug={embedRoute.serviceSlug}
+    envParam={embedRoute.envParam}
+    themeParam={embedRoute.themeParam}
+    titleParam={embedRoute.titleParam}
+    isAuthPopup={embedRoute.isAuthPopup}
+  />
+{:else}
 <AuraBackground dark={isDark}>
   {#if !authChecked}
     <div class="auth-loading-screen">
@@ -559,6 +606,7 @@
     </div>
   {/if}
 </AuraBackground>
+{/if}
 
 <style>
   .auth-loading-screen {

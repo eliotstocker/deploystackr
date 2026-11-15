@@ -64,6 +64,11 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+html.embed-mode,
+html.embed-mode body {
+    background: transparent;
+}
+
 @media (max-width: 860px) {
     html,
     body {
