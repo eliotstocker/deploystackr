@@ -16,7 +16,7 @@
   import SourceIcon from "./SourceIcon.svelte";
   import UserAvatar from "./UserAvatar.svelte";
   import UserMenu from "./UserMenu.svelte";
-  import { sortEnvironments } from "../lib/envPriority";
+  import { sortEnvironments, formatShortVersion as formatCleanVersion } from "../lib/envPriority";
   import type { AuthUser } from "../types";
 
   interface Props {
@@ -1174,7 +1174,7 @@
 
           <div class="active-version-display">
             <span class="version-value" title={envView.active_version}>
-              {formatShortVersion(envView.active_version)}
+              {formatCleanVersion(envView.active_version)}
             </span>
             {#if getClusterStatus(envName, envView)}
               {@const cs = getClusterStatus(envName, envView)}

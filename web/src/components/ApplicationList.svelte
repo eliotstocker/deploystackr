@@ -4,7 +4,7 @@
   import ServiceIcon from './ServiceIcon.svelte';
   import SourceIcon from './SourceIcon.svelte';
   import UserMenu from './UserMenu.svelte';
-  import { sortEnvironments, getTopEnvStatus } from '../lib/envPriority';
+  import { sortEnvironments, getTopEnvStatus, formatShortVersion } from '../lib/envPriority';
 
   interface Props {
     services: ServiceResponse[];
@@ -84,15 +84,6 @@
     if (lower.includes('stag')) return 'badge-staging';
     if (lower.includes('dev')) return 'badge-dev';
     return 'badge-default';
-  }
-
-  function formatShortVersion(v: string): string {
-    if (!v || v === 'unknown') return 'n/a';
-    if (v.includes(':')) {
-      const parts = v.split(':');
-      return parts[parts.length - 1];
-    }
-    return v;
   }
 
   type TooltipData = {

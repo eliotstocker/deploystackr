@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ServiceResponse } from "../types";
+  import { formatShortVersion } from "../lib/envPriority";
 
   interface Props {
     services: ServiceResponse[];
@@ -99,8 +100,8 @@
                 class="status-indicator {envView.cluster_status?.status || ''}"
                 title={envView.cluster_status ? `${envView.cluster_status.status}: ${envView.cluster_status.message || ''}` : 'Status check not enabled'}
               ></span>
-              <span class="version-tag"
-                >{envView.active_version || "unknown"}</span
+              <span class="version-tag" title={envView.active_version}
+                >{envView.active_version ? formatShortVersion(envView.active_version) : "unknown"}</span
               >
               {#if envView.cluster_status}
                 <span

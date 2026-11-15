@@ -44,12 +44,20 @@ export function sortEnvironments<T>(
 }
 
 export function formatShortVersion(v?: string): string {
-    if(!v || v === 'unknown') return 'n/a';
-    if(v.includes(':')) {
-        const parts = v.split(':');
-        return parts[parts.length - 1];
+    if(!v || v === 'unknown') {
+        return 'n/a';
     }
-    return v;
+    let short = v;
+    if(short.includes(':')) {
+        const parts = short.split(':');
+        short = parts[parts.length - 1];
+    }
+    //strip trailing tags/prerelease metadata from semver versions
+    const semverMatch = short.match(/^(v?\d+\.\d+\.\d+)(?:[-_+].*)?$/);
+    if(semverMatch) {
+        return semverMatch[1];
+    }
+    return short;
 }
 
 export function cleanTag(v?: string): string {
