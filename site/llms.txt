@@ -53,9 +53,6 @@ Compiled in Go with an embedded Svelte 5 frontend. Zero external database, zero 
 ### In-Repo GitOps Config
 Place a `.deploystackr.yaml` in your GitOps repo root. DeployStackr auto-discovers services and reloads automatically on git push.
 
-### Built-in MCP Server
-Connect AI coding agents directly via Streamable HTTP (`/mcp`) to inspect active versions, promotion queues, commit diffs, audit history, and trigger promotions with full GitHub RBAC.
-
 ## Built-in MCP Server 
 
 Let AI agents inspect GitOps promotion state and trigger version promotions directly from your IDE or CLI using Streamable HTTP at `/mcp` (or `/api/mcp`). Authenticate requests with a GitHub token (`Authorization: Bearer <GITHUB_TOKEN>` or `X-GitHub-Token`) so DeployStackr enforces your repository RBAC and attributes every commit and PR to you.
